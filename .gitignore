@@ -1,0 +1,33 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+.npmrc
+
+# Dependencies and generated output
+node_modules/
+.next/
+out/
+dist/
+coverage/
+.cache/
+.turbo/
+.vercel/
+*.tsbuildinfo
+verification-logs/
+*.log
+.DS_Store
+
+# Local archives and backups
+*.zip
+*.bak
+*.backup
+*.tmp
+
+# Local reference exports
+reference-archive/
+

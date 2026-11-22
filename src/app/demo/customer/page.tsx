@@ -1,0 +1,1 @@
+import {CustomerOverview} from "@/components/dashboard-page"; export default function Page(){return <CustomerOverview/>;}

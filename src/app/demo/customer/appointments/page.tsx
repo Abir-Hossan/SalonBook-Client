@@ -1,0 +1,1 @@
+import {CustomerAppointments} from "@/components/dashboard-page"; export default function Page(){return <CustomerAppointments/>;}

@@ -1,0 +1,1 @@
+import {CustomerProfile} from "@/components/dashboard-page"; export default function Page(){return <CustomerProfile/>;}

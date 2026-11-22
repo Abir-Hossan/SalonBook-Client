@@ -1,0 +1,18 @@
+.customer-reference{background:var(--paper)}
+.customer-reference .dashboard-sidebar{background:var(--cream);border-color:#eadbd0}
+.customer-reference .dashboard-topbar{background:var(--paper);border-color:#eadbd0}
+.customer-reference .sidebar-nav a.active{background:var(--ink);color:var(--white);border-radius:5px}
+.customer-reference .sidebar-nav a.active svg{color:inherit}
+.customer-reference .dashboard-welcome{background:var(--cream);border:1px solid #eadbd0;border-radius:7px;padding:clamp(15px,2.5vw,35px)}
+.customer-reference .dashboard-welcome h1,.customer-reference .section-heading h2{font-family:var(--serif);letter-spacing:-.025em}
+.customer-reference .dashboard-welcome h1 em{color:var(--gold)}
+.customer-reference .stat-card,.customer-reference .appointment-card{background:var(--white);border:1px solid #eadbd0;border-radius:6px}
+.customer-reference .table-toolbar{flex-wrap:wrap}
+.customer-reference .filter-pills{flex-wrap:wrap}
+.customer-reference .appointment-list{display:grid;gap:14px}
+.customer-reference .appointment-card{min-width:0}
+.customer-reference .appointment-card-main{min-width:0;overflow-wrap:anywhere}
+.customer-reference .appointment-card>img{object-fit:cover;border-radius:5px}
+.customer-reference .appointment-card-end{gap:8px}
+.customer-reference .dashboard-promo{background:var(--cream)}
+@media(max-width:620px){.customer-reference .dashboard-welcome{align-items:start}.customer-reference .appointment-card-end{width:100%;justify-content:space-between}.customer-reference .topbar-date{display:none}}

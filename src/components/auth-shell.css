@@ -1,0 +1,66 @@
+.sanctuary-auth{background:var(--paper);color:var(--ink)}
+.sanctuary-auth .header-inner>.brand{font-family:var(--serif);font-size:clamp(19px,2vw,29px);letter-spacing:.04em}
+.sanctuary-auth .header-inner>.brand small{display:none}
+.sanctuary-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.sanctuary-visual{position:relative;isolation:isolate;display:grid;grid-template-rows:auto 1fr auto 1fr auto;gap:clamp(14px,2vw,32px);padding:clamp(25px,3.8vw,76px);color:#fff7ee;background:#392c21}
+.sanctuary-visual img{object-fit:cover;object-position:center;z-index:-2}
+.sanctuary-visual::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#26190d1c,#1a100c38 55%,#150d09a8);z-index:-1}
+.sanctuary-badges,.sanctuary-location{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:clamp(9px,.85vw,14px);text-transform:uppercase;letter-spacing:.1em}
+.sanctuary-badges span,.sanctuary-hospitality{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:24px;background:#f8deb830;color:#fff4e4}
+.sanctuary-badges b,.sanctuary-hospitality,.sanctuary-display em,.sanctuary-features strong{color:#ffdcaa}
+.sanctuary-story{align-self:end}
+.sanctuary-hospitality{font-size:11px;letter-spacing:.14em;text-transform:uppercase;border-radius:4px;margin-bottom:14px}
+.sanctuary-display{font-family:var(--serif);font-size:clamp(36px,4.35vw,86px);line-height:1.08;letter-spacing:-.035em;margin:0 0 15px}
+.sanctuary-copy{line-height:1.65;max-width:62ch;font-size:clamp(13px,1.16vw,23px);margin:0;color:#fff1e5}
+.sanctuary-features{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-self:start;gap:8px}
+.sanctuary-features div{display:grid;gap:5px;background:#3c302b91;border-radius:6px;padding:clamp(10px,1.1vw,20px);font-size:clamp(10px,.94vw,17px);line-height:1.45}
+.sanctuary-features strong{text-transform:uppercase;font-size:.9em}
+.sanctuary-location{grid-row:5;color:#f0dfce}
+.sanctuary-register .sanctuary-visual{grid-template-rows:auto auto 1fr auto auto 1fr auto}
+.sanctuary-register .sanctuary-story{grid-row:2;margin-top:clamp(8px,2vw,40px)}
+.sanctuary-register .sanctuary-copy{font-family:var(--serif);font-style:italic}
+.sanctuary-register .sanctuary-features{grid-row:4;grid-template-columns:1fr}
+.sanctuary-register .sanctuary-location{grid-row:7}
+.sanctuary-side{width:100%;max-width:1040px;margin-inline:auto;padding:clamp(30px,4vw,80px) 12.5%;display:flex;flex-direction:column;gap:clamp(15px,1.5vw,30px);min-width:0}
+.sanctuary-back,.sanctuary-eyebrow{display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.09em;font-size:clamp(10px,1vw,19px);color:var(--gold)}
+.sanctuary-eyebrow{font-size:clamp(10px,.8vw,15px);font-weight:700;margin:0 0 8px}
+.sanctuary-side h1{font-family:var(--serif);font-size:clamp(33px,3.13vw,64px);font-weight:500;line-height:1.08;letter-spacing:-.035em;margin:0 0 8px}
+.sanctuary-intro{line-height:1.6;color:var(--muted);font-size:clamp(13px,1.1vw,23px);margin:0}
+.sanctuary-form{display:grid;gap:clamp(13px,1.2vw,24px)}
+.sanctuary-field{display:grid;gap:6px;font-size:clamp(11px,.88vw,17px);font-weight:650}
+.sanctuary-field .input-icon{border:1px solid #eee2d9;border-radius:6px;min-height:clamp(46px,3.7vw,75px);background:#fff}
+.sanctuary-field .input-icon input{font:inherit;font-weight:400}
+.sanctuary-field .input-icon svg{flex-shrink:0}
+.sanctuary-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}
+.sanctuary-form .button-dark{min-height:clamp(48px,4vw,80px);border-radius:6px;font-size:clamp(11px,.94vw,18px)}
+.sanctuary-consent{display:flex;align-items:baseline;gap:8px;line-height:1.5}
+.sanctuary-consent input{accent-color:var(--ink)}
+.sanctuary-notice,.sanctuary-portrait,.sanctuary-rules,.sanctuary-recovery{background:var(--cream);border-radius:6px;padding:12px 14px;line-height:1.55;font-size:clamp(12px,.84vw,16px)}
+.sanctuary-portrait{display:grid;gap:10px}
+.sanctuary-portrait input{width:100%;min-width:0}
+.sanctuary-portrait-preview{display:flex;align-items:center;gap:10px}
+.sanctuary-portrait-preview img{width:48px;height:48px;border-radius:8px;object-fit:cover}
+.sanctuary-rules{display:grid;gap:7px}
+.sanctuary-rules ul{margin:0;padding:0;list-style:none;display:flex;gap:6px 14px;flex-wrap:wrap}
+.sanctuary-rules progress{width:100%;accent-color:var(--gold)}
+.sanctuary-rules [data-met=true]{color:var(--green);font-weight:700}
+.sanctuary-concierge,.sanctuary-switch{text-align:center;font-size:clamp(12px,.92vw,18px);line-height:1.65;margin:0}
+.sanctuary-concierge{display:flex;align-items:center;justify-content:center;gap:6px}
+.sanctuary-side a:not(.button){text-decoration:underline;text-underline-offset:.2em}
+.sanctuary-auth .footer-main{grid-template-columns:1.35fr .65fr 1fr 1fr}
+.sanctuary-auth .footer-brand .brand-mark,.sanctuary-auth .footer-brand small{display:none}
+.sanctuary-auth .footer-brand{font-family:var(--serif);font-size:24px;letter-spacing:.06em}
+@media(max-width:1000px){.sanctuary-side{padding-inline:8%}.sanctuary-auth .footer-main{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){.sanctuary-split{grid-template-columns:1fr}.sanctuary-visual,.sanctuary-register .sanctuary-visual{grid-template-rows:auto auto auto auto;gap:16px}.sanctuary-visual .sanctuary-story,.sanctuary-visual .sanctuary-features,.sanctuary-visual .sanctuary-location{grid-row:auto}.sanctuary-register .sanctuary-story{margin:0}.sanctuary-visual img{object-position:center 48%}.sanctuary-side{padding:30px clamp(17px,6vw,45px) 36px}}
+@media(max-width:420px){.sanctuary-features,.sanctuary-auth .footer-main{grid-template-columns:1fr}.sanctuary-display{font-size:34px}}
+.sanctuary-portrait-tabs{display:flex;gap:4px;flex-wrap:wrap}
+.sanctuary-portrait-tabs button{color:var(--ink);background:var(--peach);border:1px solid transparent;border-radius:4px;padding:6px 9px}
+.sanctuary-portrait-tabs button[aria-pressed=true]{background:#fff;border-color:var(--line)}
+.sanctuary-notice p{margin:6px 0}
+.sanctuary-concierge a{font-weight:700}
+@media(min-width:761px){.sanctuary-login{min-height:65vw}.sanctuary-register{min-height:108vw}}
+.sanctuary-partners{display:grid;gap:10px;text-align:center;color:var(--muted);font-size:clamp(11px,.85vw,16px)}
+.sanctuary-partners>span{display:flex;align-items:center;gap:12px;text-transform:uppercase;letter-spacing:.1em}
+.sanctuary-partners>span::before,.sanctuary-partners>span::after{content:"";flex:1;border-top:1px solid var(--line)}
+.sanctuary-partners>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.sanctuary-partners button{padding:12px 6px;border:1px solid var(--line);background:var(--white);color:var(--muted);border-radius:6px}
