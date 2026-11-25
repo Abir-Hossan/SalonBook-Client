@@ -14,6 +14,7 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
+      - run: node --test tests/api-target.test.mjs
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build

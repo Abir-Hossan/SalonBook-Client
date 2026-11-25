@@ -23,7 +23,7 @@
 
 .table-action{border:0;background:transparent;color:#8d704e;font-size:9px;font-weight:700;padding:5px}.table-action.danger{color:#a45f55}.password-toggle{border:0;background:transparent;color:#9a8f81;padding:4px;display:grid;place-items:center}.password-toggle:hover{color:var(--gold)}.confirm-inline .button-danger{white-space:nowrap}
 
-.confirmation-backdrop{position:fixed;inset:0;background:#211e19a8;z-index:80;display:grid;place-items:center;padding:20px}.confirmation-dialog{width:min(100%,460px);background:var(--paper);padding:30px;box-shadow:0 24px 70px #0003}.confirmation-dialog h3{font-family:var(--serif);font-size:27px;font-weight:400;margin:0 0 10px}.confirmation-dialog>p:not(.eyebrow){font-size:11px;color:var(--muted);line-height:1.8}.dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}
+.confirmation-backdrop{position:fixed;inset:0;background:#211e19a8;z-index:80;display:grid;place-items:center;padding:20px}.confirmation-dialog{width:min(100%,460px);background:var(--paper);padding:30px;box-shadow:0 24px 70px #0003}dialog.confirmation-dialog{margin:auto;border:0;max-width:calc(100% - 40px);max-height:calc(100% - 40px);color:inherit}dialog.confirmation-dialog::backdrop{background:#211e19a8}.confirmation-dialog h3{font-family:var(--serif);font-size:27px;font-weight:400;margin:0 0 10px}.confirmation-dialog>p:not(.eyebrow){font-size:11px;color:var(--muted);line-height:1.8}.dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}
 
 
 /* Figma-aligned SalonBook design system and Browse Atelier Services page */

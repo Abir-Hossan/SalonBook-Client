@@ -1,3 +1,5 @@
+import { apiFetch } from "./api-fetch";
+
 export type Account = { id: string; name: string; email: string; image?: string; role: "admin" | "customer" };
 export type ApiAppointment = {
   id: string; serviceId: string; appointmentDate: string; timeSlot: string;
@@ -9,7 +11,7 @@ export class ApiError extends Error {
   constructor(message: string, readonly status: number) { super(message); }
 }
 async function request<T>(path: string, init: RequestInit, base: string): Promise<{ data: T; meta?: PageMeta }> {
-  const response = await fetch(base + path, { ...init, cache: "no-store" });
+  const response = await apiFetch(base + path, init);
   if (response.status === 204) return { data: undefined as T };
   const body = await response.json().catch(() => null);
   if (!response.ok || !body?.success) {

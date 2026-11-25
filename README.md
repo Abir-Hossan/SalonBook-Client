@@ -59,7 +59,9 @@ npm run build
 
 ## Deployment
 
-Set `SALONBOOK_API_URL` to the public HTTPS Express URL ending in `/api` before building on Vercel. The Client branch and backend must be deployed together because appointment availability and portal pagination use the updated API.
+Set `SALONBOOK_API_URL` to the public HTTPS Express URL ending in `/api` before building on Vercel. For the public Client deployment, the current API target is `https://salonbook-server-p0f1.onrender.com/api`. Vercel Preview and Production have independent environment settings. For full preview acceptance, set the Preview target to an isolated HTTPS API and configure that API to trust the stable preview Client origin for Better Auth.
+
+The Client validates the API target before compilation and uses the same target for rewrites and server-side reads. Run `node --test tests/api-target.test.mjs` using Node 24 to check the configuration contract. A successful production build with the CI fixture URL verifies compilation. Use the deployed Client's `/salon-api/health` and the Server's `/api/ready` to verify deployed connectivity.
 
 The explicitly labelled `/demo` routes use local preview data. Public and authenticated booking flows use the real API.
 

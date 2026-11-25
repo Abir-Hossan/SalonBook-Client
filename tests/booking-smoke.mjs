@@ -27,7 +27,7 @@ try {
   for (const service of catalogue.data) await page.getByRole("heading", { name: service.serviceName, exact: true }).waitFor();
 
   const catalogueRequests = "**/catalogue-api/services?*";
-  await page.route(catalogueRequests, (route) => route.fulfill({ status: 503, json: { success: false } }));
+  await page.route(catalogueRequests, (route) => route.fulfill({ status: 200, contentType: "text/html", body: "<html><title>Service warming up</title></html>" }));
   await page.goto(origin + "/services");
   await page.getByRole("heading", { name: "Catalogue unavailable" }).waitFor();
   await page.unroute(catalogueRequests);
@@ -72,6 +72,22 @@ try {
   await managed.getByText("Confirmed", { exact: true }).waitFor();
   await page.reload();
   await appointment.getByText("Confirmed", { exact: true }).waitFor();
+  const details = appointment.getByRole("button", { name: "View details" });
+  await details.click();
+  const dialog = page.getByRole("dialog", { name: "Appointment details" });
+  await dialog.waitFor();
+  assert.equal(await dialog.evaluate((element) => element.contains(document.activeElement)), true);
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  assert.equal(await dialog.evaluate((element) => element.contains(document.activeElement)), true);
+  await page.keyboard.press("Escape");
+  await dialog.waitFor({ state: "hidden" });
+  assert.equal(await details.evaluate((element) => element === document.activeElement), true);
+
+  await page.goto(origin + "/payment/success?appointment=" + id);
+  await page.getByText("Payment confirmation is pending.", { exact: false }).waitFor();
+  await page.goto(origin + "/payment/cancel");
+  await page.getByText("Check your appointment status.", { exact: false }).waitFor();
   await page.goto(origin + "/customer/transactions");
   await page.getByText("No payments yet.").waitFor();
 
@@ -98,6 +114,43 @@ try {
   await page.getByText("Profile saved.", { exact: false }).waitFor();
   await page.reload();
   assert.equal(await page.getByLabel("Full name").inputValue(), "Updated CI Patron");
+  await admin.goto(origin + "/admin/services");
+  await admin.getByRole("link", { name: "New service" }).click();
+  const newService = "CI release verification service";
+  await admin.getByLabel("Service name").fill(newService);
+  await admin.getByLabel("Category").fill("CI category");
+  await admin.getByLabel("Description").fill("Service created during isolated release acceptance.");
+  await admin.getByLabel("Price (USD)").fill("45");
+  await admin.getByLabel("Duration (minutes)").fill("60");
+  await admin.getByLabel("Image URL").fill("https://i.ibb.co/example/salon.png");
+  await admin.getByRole("button", { name: "Save service" }).click();
+  await admin.waitForURL("**/admin/services");
+  await admin.getByPlaceholder("Search services").fill(newService);
+  const newServiceRow = admin.getByRole("row").filter({ hasText: newService });
+  await newServiceRow.getByRole("link", { name: "Edit" }).click();
+  await admin.getByLabel("Price (USD)").fill("35");
+  await admin.getByLabel("Status").selectOption("inactive");
+  await admin.getByRole("button", { name: "Save service" }).click();
+  await admin.waitForURL("**/admin/services");
+  await admin.getByPlaceholder("Search services").fill(newService);
+  await newServiceRow.getByText("Inactive", { exact: true }).waitFor();
+  await newServiceRow.getByText("$35.00", { exact: true }).waitFor();
+  await newServiceRow.getByRole("button", { name: "Delete" }).click();
+  await newServiceRow.getByRole("button", { name: "Confirm", exact: true }).click();
+  await newServiceRow.waitFor({ state: "hidden" });
+
+  await admin.goto(origin + "/admin/users");
+  await admin.getByPlaceholder("Search users").fill(email);
+  const patronRow = admin.getByRole("row").filter({ hasText: email });
+  await patronRow.getByRole("button", { name: "Block", exact: true }).click();
+  await patronRow.getByRole("button", { name: "Confirm", exact: true }).click();
+  await patronRow.getByText("Blocked", { exact: true }).waitFor();
+  await page.goto(origin + "/customer");
+  await page.waitForURL("**/sign-in");
+  await patronRow.getByRole("button", { name: "Unblock", exact: true }).click();
+  await patronRow.getByRole("button", { name: "Confirm", exact: true }).click();
+  await patronRow.getByText("Active", { exact: true }).waitFor();
+
   await page.goto(origin + "/admin");
   await page.waitForURL("**/sign-in");
 
@@ -107,7 +160,7 @@ try {
   await page.goto(origin + "/customer");
   await page.waitForURL("**/sign-in");
 
-  for (const width of [390, 768, 1440]) {
+  for (const width of [390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     for (const route of ["/", "/services", "/sign-in", "/sign-up"]) {
       await page.goto(origin + route);
@@ -117,7 +170,7 @@ try {
     }
   }
   assert.deepEqual(errors, [], "Unhandled browser errors");
-  console.log("Browser checks passed: six services, catalogue error and retry, search, registration, booking resume, confirmation, cancellation, payment history, profile persistence, role protection, sign-out and responsive layouts.");
+  console.log("Browser checks passed: six services, catalogue error and retry, search, registration, booking resume, confirmation, cancellation, payment history, profile persistence, admin catalogue CRUD, blocking and unblocking, role protection, sign-out, keyboard dialog behavior, and four responsive widths.");
 } finally {
   await browser.close();
 }
