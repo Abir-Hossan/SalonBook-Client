@@ -141,6 +141,22 @@ try {
   await page.getByText("Profile saved.", { exact: false }).waitFor();
   await page.reload();
   assert.equal(await page.getByLabel("Full name").inputValue(), "Updated CI Patron");
+
+  await page.setViewportSize({ width: 390, height: 900 });
+  const dashboardMenu = page.getByRole("button", { name: "Toggle navigation" });
+  const dashboardNav = page.getByRole("navigation", { name: "Dashboard navigation" });
+  await dashboardNav.waitFor({ state: "hidden" });
+  await dashboardMenu.focus();
+  await page.keyboard.press("Enter");
+  await dashboardNav.waitFor();
+  assert.equal(await dashboardMenu.getAttribute("aria-expanded"), "true");
+  assert.ok(await dashboardNav.evaluate((element) => element.contains(document.activeElement)));
+  await page.keyboard.press("Escape");
+  await dashboardNav.waitFor({ state: "hidden" });
+  assert.equal(await dashboardMenu.getAttribute("aria-expanded"), "false");
+  assert.ok(await dashboardMenu.evaluate((element) => element === document.activeElement));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await dashboardNav.waitFor();
   await admin.goto(origin + "/admin/services");
   await admin.getByRole("link", { name: "New service" }).click();
   const newService = "CI release verification service";
