@@ -103,10 +103,7 @@ export default function ServicesPage() {
           <h1>Browse Atelier Services <em>— Curated for Discerning Patrons</em></h1>
           <p>Explore bespoke beauty experiences, clinical esthetics, and holistic wellness therapies performed exclusively by vetted master colorists, licensed estheticians, and senior artisans across our global flagship sanctuaries.</p>
           <div className="catalog-stats">
-            <article><span>Active Artisans</span><strong>48</strong><small>Vetted master practitioners</small></article>
-            <article><span>Ritual Categories</span><strong>07</strong><small>Hair, Scalp, Skin &amp; Nails</small></article>
-            <article><span>Guest Satisfaction</span><strong>4.96</strong><small>Based on 1,480+ verifications</small></article>
-            <article><span>Sanctuary Suites</span><strong>100%</strong><small>Private spaces and chambers</small></article>
+            <article><span>Service categories</span><strong>{categories.length}</strong></article>
           </div>
         </div>
       </section>

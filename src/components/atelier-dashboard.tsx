@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useDeferredValue, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarDays, CreditCard, Scissors, Users } from "lucide-react";
@@ -8,7 +8,7 @@ import { DashboardShell } from "@/components/dashboard-shell";
 import { ConfirmButton, SearchInput } from "@/components/interactive";
 import { SectionHeading, StatCard, StatusPill } from "@/components/ui";
 import { PatronProfile } from "@/components/patron-dashboard";
-import { api, json, type Account } from "@/lib/account-api";
+import { api, apiPage, json, type Account } from "@/lib/account-api";
 import type { Service } from "@/types";
 import type { ComponentProps } from "react";
 import { money } from "@/lib/utils";
@@ -16,10 +16,10 @@ import { money } from "@/lib/utils";
 type Mode = "overview" | "services" | "appointments" | "users" | "transactions" | "profile" | "editor";
 type Entry = { id: string; [key: string]: string | number | boolean | undefined };
 const lists = {
-  services: { title: "Manage services", path: "/services?includeInactive=true&limit=100", fields: ["serviceName","category","price","status"] },
-  appointments: { title: "Manage appointments", path: "/admin/appointments?limit=100", fields: ["id","appointmentDate","timeSlot","status","paymentStatus"] },
-  users: { title: "Manage customers", path: "/admin/users?role=customer&limit=100", fields: ["name","email","isBlocked"] },
-  transactions: { title: "Transactions", path: "/admin/transactions?limit=100", fields: ["appointmentId","amount","currency","status","createdAt"] },
+  services: { title: "Manage services", path: "/services?includeInactive=true", fields: ["serviceName","category","price","status"] },
+  appointments: { title: "Manage appointments", path: "/admin/appointments", fields: ["id","appointmentDate","timeSlot","status","paymentStatus"] },
+  users: { title: "Manage customers", path: "/admin/users?role=customer", fields: ["name","email","isBlocked"] },
+  transactions: { title: "Transactions", path: "/admin/transactions", fields: ["appointmentId","amount","currency","status","createdAt"] },
 };
 
 export function AtelierDashboard({ account, mode, serviceId }: { account: Account; mode: Mode; serviceId?: string }) {
@@ -50,17 +50,30 @@ function AtelierList({ mode }: { mode: keyof typeof lists }) {
   const { title, path, fields } = lists[mode];
   const [entries, setEntries] = useState<Entry[]>();
   const [query, setQuery] = useState("");
+  const search = useDeferredValue(query);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [retry, setRetry] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
     setError("");
-    api<Entry[]>(path, { signal: controller.signal }).then(setEntries).catch((failure) => {
+    const [endpoint, defaults] = path.split("?");
+    const params = new URLSearchParams(defaults);
+    params.set("page", String(page));
+    params.set("limit", "20");
+    if (search.trim()) params.set("q", search.trim());
+    apiPage<Entry>(endpoint + "?" + params, { signal: controller.signal }).then((result) => {
+      if (controller.signal.aborted) return;
+      setEntries(result.data);
+      setTotalPages(result.totalPages);
+      if (page > result.totalPages) setPage(result.totalPages);
+    }).catch((failure) => {
       if (!controller.signal.aborted) setError(failure.message);
     });
     return () => controller.abort();
-  }, [path, retry]);
+  }, [page, path, retry, search]);
 
   async function mutate(path: string, method = "PATCH") {
     setError("");
@@ -74,14 +87,13 @@ function AtelierList({ mode }: { mode: keyof typeof lists }) {
     }
   }
 
-  const visible = entries?.filter((row) => fields.some((field) => String(row[field] ?? "").toLowerCase().includes(query.toLowerCase())));
   return <><SectionHeading eyebrow="Atelier governance" title={title} action={mode === "services" && <Link href="/admin/services/new" className="button button-dark">New service</Link>}/>
-    <div className="table-toolbar"><SearchInput value={query} onChange={setQuery} placeholder={"Search " + mode}/></div>
+    <div className="table-toolbar"><SearchInput value={query} onChange={(value) => { setQuery(value); setPage(1); }} placeholder={"Search " + mode}/></div>
     {notice && <p role="status">{notice}</p>}
     {error && <p role="alert">{error} <button className="table-action" onClick={() => setRetry((value) => value + 1)}>Retry</button></p>}
-    {!entries && !error ? <p role="status">Loading {mode}…</p> : visible?.length ? <div className="table-wrap"><table>
+    {!entries && !error ? <p role="status">Loading {mode}…</p> : entries?.length ? <div className="table-wrap"><table>
       <thead><tr>{fields.map((field) => <th key={field}>{field.replace(/([A-Z])/g, " $1")}</th>)}{mode !== "transactions" && <th>Actions</th>}</tr></thead>
-      <tbody>{visible.map((row) => <tr key={row.id}>
+      <tbody>{entries.map((row) => <tr key={row.id}>
         {fields.map((field) => <td key={field}>{["status","paymentStatus"].includes(field) ? <StatusPill status={String(row[field]) as ComponentProps<typeof StatusPill>["status"]}/> : ["price","amount"].includes(field) ? money(Number(row[field])) : field === "isBlocked" ? row.isBlocked ? "Blocked" : "Active" : String(row[field] ?? "—")}</td>)}
         {mode !== "transactions" && <td><div className="row-actions">
           {mode === "services" && <><Link className="table-action" href={"/admin/services/" + encodeURIComponent(row.id) + "/edit"}>Edit</Link><ConfirmButton label="Delete" confirmTitle="Delete this service?" confirmText="Services with appointments cannot be deleted." onConfirm={() => { void mutate("/services/" + encodeURIComponent(row.id), "DELETE"); return false; }}/></>}
@@ -91,6 +103,7 @@ function AtelierList({ mode }: { mode: keyof typeof lists }) {
         </div></td>}
       </tr>)}</tbody>
     </table></div> : !error && <p>No {mode} found.</p>}
+    {totalPages > 1 && <div className="button-row"><button type="button" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</button><span>Page {page} of {totalPages}</span><button type="button" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</button></div>}
   </>;
 }
 
