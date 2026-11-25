@@ -17,6 +17,7 @@ export function BookingPreview({ service, accountRole }: { service: Pick<Service
   const [time, setTime] = useState("");
   const [availability, setAvailability] = useState<Availability>();
   const [availabilityError, setAvailabilityError] = useState("");
+  const [dateNotice, setDateNotice] = useState("");
   const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
@@ -40,7 +41,9 @@ export function BookingPreview({ service, accountRole }: { service: Pick<Service
       if (controller.signal.aborted) return;
       if (date && error instanceof ApiError && error.status === 422) {
         setAvailability(undefined);
+        setTime("");
         setDate("");
+        setDateNotice("Your selected date is no longer bookable. Choose a date and time from the updated options.");
         return;
       }
       setAvailability(undefined);
@@ -94,12 +97,13 @@ export function BookingPreview({ service, accountRole }: { service: Pick<Service
     </div>
     <label className="field">
       <span>Preferred date</span>
-      <span className="input-icon"><CalendarDays size={15}/><input type="date" min={availability?.earliestDate} disabled={!availability && !date} value={selectedDate} onChange={(event) => { setDate(event.target.value); setTime(""); }} required/></span>
+      <span className="input-icon"><CalendarDays size={15}/><input type="date" min={availability?.earliestDate} disabled={!availability && !date} value={selectedDate} onChange={(event) => { setDate(event.target.value); setTime(""); setDateNotice(""); }} required/></span>
     </label>
     <label className="field">
       <span>Preferred time</span>
-      <span className="input-icon"><Clock3 size={15}/><select required disabled={!times.length} value={times.includes(time) ? time : ""} onChange={(event) => setTime(event.target.value)}><option value="">{times.length ? "Choose a time" : "No times available"}</option>{times.map((slot) => <option key={slot}>{slot}</option>)}</select></span>
+      <span className="input-icon"><Clock3 size={15}/><select required disabled={!times.length} value={times.includes(time) ? time : ""} onChange={(event) => { setTime(event.target.value); setDateNotice(""); }}><option value="">{times.length ? "Choose a time" : "No times available"}</option>{times.map((slot) => <option key={slot}>{slot}</option>)}</select></span>
     </label>
+    {dateNotice && <p role="status">{dateNotice}</p>}
     {availabilityError && <p role="alert">{availabilityError} <button type="button" onClick={() => setRefresh((value) => value + 1)}>Retry</button></p>}
     {!availabilityError && availability?.date !== selectedDate && <p role="status">Checking available times.</p>}
     <button className="button button-dark button-full" disabled={!times.includes(time) || busy || accountRole === "admin"}>{busy ? "Saving…" : accountRole === "customer" ? "Request appointment" : "Continue to sign in"} <ArrowUpRight size={15}/></button>
