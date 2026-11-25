@@ -27,11 +27,18 @@ try {
   for (const service of catalogue.data) await page.getByRole("heading", { name: service.serviceName, exact: true }).waitFor();
 
   const catalogueRequests = "**/catalogue-api/services?*";
+  const categoryRequests = "**/catalogue-api/services/categories";
   await page.route(catalogueRequests, (route) => route.fulfill({ status: 200, contentType: "text/html", body: "<html><title>Service warming up</title></html>" }));
+  await page.route(categoryRequests, (route) => route.abort());
   await page.goto(origin + "/services");
   await page.getByRole("heading", { name: "Catalogue unavailable" }).waitFor();
   await page.unroute(catalogueRequests);
   await page.getByRole("button", { name: "Try again" }).click();
+  await page.getByText("Service categories could not load.").waitFor();
+  await page.unroute(categoryRequests);
+  await page.getByRole("button", { name: "Retry categories", exact: true }).click();
+  await page.getByRole("group", { name: "Filter by category" })
+    .getByRole("button", { name: catalogue.data[0].category, exact: true }).waitFor();
   const search = page.getByPlaceholder("Search by treatment name...");
   await search.fill(catalogue.data[0].serviceName);
   const serviceName = page.getByRole("heading", { name: catalogue.data[0].serviceName, exact: true });

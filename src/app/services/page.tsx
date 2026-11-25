@@ -29,6 +29,8 @@ function CatalogCard({ service, index }: { service: Service; index: number }) {
 export default function ServicesPage() {
   const [items, setItems] = useState<Service[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [categoryState, setCategoryState] = useState<"loading" | "ready" | "error">("loading");
+  const [categoryRetry, setCategoryRetry] = useState(0);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [sort, setSort] = useState("newest");
@@ -47,11 +49,18 @@ export default function ServicesPage() {
 
   useEffect(() => {
     const controller = new AbortController();
+    setCategoryState("loading");
     listServiceCategories(controller.signal)
-      .then(({ data }) => setCategories(data))
-      .catch(() => {});
+      .then(({ data }) => {
+        if (controller.signal.aborted) return;
+        setCategories(data);
+        setCategoryState("ready");
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCategoryState("error");
+      });
     return () => controller.abort();
-  }, [retry]);
+  }, [categoryRetry]);
 
   useEffect(() => {
     if (!ready) return;
@@ -103,7 +112,7 @@ export default function ServicesPage() {
           <h1>Browse Atelier Services <em>— Curated for Discerning Patrons</em></h1>
           <p>Explore bespoke beauty experiences, clinical esthetics, and holistic wellness therapies performed exclusively by vetted master colorists, licensed estheticians, and senior artisans across our global flagship sanctuaries.</p>
           <div className="catalog-stats">
-            <article><span>Service categories</span><strong>{categories.length}</strong></article>
+            <article><span>Service categories</span><strong>{categoryState === "ready" ? categories.length : "—"}</strong></article>
           </div>
         </div>
       </section>
@@ -118,6 +127,10 @@ export default function ServicesPage() {
 
           <div className="catalog-category-row" role="group" aria-label="Filter by category">
             {["", ...categories].map((item) => <button key={item} type="button" aria-pressed={category === item} className={category === item ? "active" : ""} onClick={() => { setCategory(item); setPage(1); }}>{item || "All Categories"}</button>)}
+            {categoryState === "error" && <>
+              <span role="status">Service categories could not load.</span>
+              <button type="button" onClick={() => setCategoryRetry((value) => value + 1)}>Retry categories</button>
+            </>}
           </div>
           <div className="catalog-quick-filters"><small aria-live="polite">{!loading && !error && `Showing ${items.length} of ${total} services`}</small></div>
 
