@@ -75,11 +75,11 @@ function AtelierList({ mode }: { mode: keyof typeof lists }) {
     return () => controller.abort();
   }, [page, path, retry, search]);
 
-  async function mutate(path: string, method = "PATCH") {
+  async function mutate(path: string, method = "PATCH", body?: unknown) {
     setError("");
     setNotice("");
     try {
-      await api(path, { method });
+      await api(path, body ? json(method, body) : { method });
       setNotice("Changes saved.");
       setRetry((value) => value + 1);
     } catch (failure) {
@@ -98,7 +98,8 @@ function AtelierList({ mode }: { mode: keyof typeof lists }) {
         {mode !== "transactions" && <td><div className="row-actions">
           {mode === "services" && <><Link className="table-action" href={"/admin/services/" + encodeURIComponent(row.id) + "/edit"}>Edit</Link><ConfirmButton label="Delete" confirmTitle="Delete this service?" confirmText="Services with appointments cannot be deleted." onConfirm={() => { void mutate("/services/" + encodeURIComponent(row.id), "DELETE"); return false; }}/></>}
           {mode === "appointments" && row.status === "pending" && <button className="table-action" onClick={() => void mutate("/admin/appointments/" + row.id + "/confirm")}>Confirm</button>}
-          {mode === "appointments" && (row.status === "pending" || row.status === "confirmed") && <ConfirmButton label="Cancel" confirmTitle="Cancel this appointment?" confirmText="The record remains in appointment history." onConfirm={() => { void mutate("/admin/appointments/" + row.id + "/cancel"); return false; }}/>}
+          {mode === "appointments" && row.checkoutPending && <ConfirmButton label="Release checkout" confirmTitle="Close the unpaid checkout?" confirmText="This closes the Stripe test checkout so you can manage the appointment." onConfirm={() => { void mutate("/payments/release-checkout", "POST", { appointmentId: row.id }); return false; }}/>} 
+          {mode === "appointments" && !row.checkoutPending && row.paymentStatus !== "paid" && (row.status === "pending" || row.status === "confirmed") && <ConfirmButton label="Cancel" confirmTitle="Cancel this appointment?" confirmText="The record remains in appointment history." onConfirm={() => { void mutate("/admin/appointments/" + row.id + "/cancel"); return false; }}/>}
           {mode === "users" && <ConfirmButton label={row.isBlocked ? "Unblock" : "Block"} confirmTitle="Change account access?" confirmText="This affects the customer's ability to sign in." onConfirm={() => { void mutate("/admin/users/" + row.id + (row.isBlocked ? "/unblock" : "/block")); return false; }}/>}
         </div></td>}
       </tr>)}</tbody>
