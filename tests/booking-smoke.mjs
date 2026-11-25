@@ -91,7 +91,12 @@ try {
   await dialog.waitFor({ state: "hidden" });
   assert.equal(await details.evaluate((element) => element === document.activeElement), true);
 
+  const paymentStatusRequest = "**/salon-api/appointments/" + id;
+  await page.route(paymentStatusRequest, (route) => route.abort());
   await page.goto(origin + "/payment/success?appointment=" + id);
+  await page.getByText("Payment status is unavailable.", { exact: false }).waitFor();
+  await page.unroute(paymentStatusRequest);
+  await page.getByRole("button", { name: "Check payment status again" }).click();
   await page.getByText("Payment confirmation is pending.", { exact: false }).waitFor();
   await page.goto(origin + "/payment/cancel");
   await page.getByText("Check your appointment status.", { exact: false }).waitFor();
