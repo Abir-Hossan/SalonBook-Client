@@ -80,6 +80,7 @@ try {
   const nextDate = new Date(options.data.earliestDate + "T00:00:00Z");
   nextDate.setUTCDate(nextDate.getUTCDate() + 1);
   await page.goto(origin + "/services/" + serviceId);
+  await timeSelect.locator("option").nth(1).waitFor({ state: "attached" });
   await page.locator('.booking-panel input[type="date"]').fill(nextDate.toISOString().slice(0, 10));
   await timeSelect.locator("option").filter({ hasText: "09:30 AM" }).waitFor({ state: "attached" });
   await timeSelect.selectOption({ label: "09:30 AM" });

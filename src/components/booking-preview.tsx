@@ -94,7 +94,7 @@ export function BookingPreview({ service, accountRole }: { service: Pick<Service
     </div>
     <label className="field">
       <span>Preferred date</span>
-      <span className="input-icon"><CalendarDays size={15}/><input type="date" min={availability?.earliestDate} value={selectedDate} onChange={(event) => { setDate(event.target.value); setTime(""); }} required/></span>
+      <span className="input-icon"><CalendarDays size={15}/><input type="date" min={availability?.earliestDate} disabled={!availability && !date} value={selectedDate} onChange={(event) => { setDate(event.target.value); setTime(""); }} required/></span>
     </label>
     <label className="field">
       <span>Preferred time</span>
