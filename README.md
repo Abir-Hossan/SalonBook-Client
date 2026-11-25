@@ -2,17 +2,15 @@
 
 Luxury salon appointment-booking frontend built with Next.js App Router, React, TypeScript, and Tailwind CSS.
 
-## Phase 01 scope
+## Application scope
 
 - Public home, service catalogue, service details, sign-in/sign-up, payment result and error pages
 - Customer overview, appointments, and profile
 - Admin overview, service management, appointment management, customer management, transactions, and profile
-- Responsive layouts and temporary local mock data
+- Responsive public, customer and administration layouts
 - Loading, empty, error, success, and confirmation UI states
 
-Home, service browsing, and service details read from the Express API at `SALONBOOK_API_URL`. The booking, auth, and dashboard screens still contain preview flows.
-
-The sign-in screen uses a client component for interactive controls so the route can be prerendered. Authentication and password recovery still require the server integration.
+The public catalogue, booking availability, Better Auth, dashboards and payments use the Express API through Next.js rewrites. Booking drafts are saved in the originating browser tab until authentication. Submitting a real booking writes to the Server. The customer portal includes payment history.
 
 ## Requirements
 
@@ -22,7 +20,7 @@ The sign-in screen uses a client component for interactive controls so the route
 ## Setup
 
 ```bash
-npm install
+npm ci
 cp .env.example .env.local
 npm run dev
 ```
@@ -58,6 +56,10 @@ npm run build
 - `/admin/transactions`
 - `/admin/profile`
 
-## Temporary mock behavior
+## Deployment
 
-Forms and dashboard actions demonstrate frontend states only. Data is not persisted and no real authentication or payment is performed. These flows will be replaced by backend integration in the corresponding approved phases.
+Set `SALONBOOK_API_URL` to the public HTTPS Express URL ending in `/api` before building on Vercel. The Client branch and backend must be deployed together because appointment availability and portal pagination use the updated API.
+
+The explicitly labelled `/demo` routes use local preview data. Public and authenticated booking flows use the real API.
+
+[Project status and server deployment](https://github.com/Abir-Hossan/SalonBook-Server/blob/completion/assignment-readiness/PROJECT_STATUS.md)
