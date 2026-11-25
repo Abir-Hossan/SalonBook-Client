@@ -172,6 +172,20 @@ try {
   await page.goto(origin + "/customer");
   await page.waitForURL("**/sign-in");
 
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto(origin);
+  const menu = page.getByRole("button", { name: "Open menu" });
+  const mobileNav = page.getByRole("navigation", { name: "Mobile navigation" });
+  await mobileNav.waitFor({ state: "hidden" });
+  await menu.focus();
+  await page.keyboard.press("Enter");
+  await mobileNav.waitFor();
+  await page.keyboard.press("Tab");
+  assert.ok(await mobileNav.evaluate((element) => element.contains(document.activeElement)));
+  await page.keyboard.press("Escape");
+  await mobileNav.waitFor({ state: "hidden" });
+  assert.ok(await menu.evaluate((element) => element === document.activeElement));
+
   for (const width of [390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     for (const route of ["/", "/services", "/sign-in", "/sign-up"]) {
@@ -182,7 +196,7 @@ try {
     }
   }
   assert.deepEqual(errors, [], "Unhandled browser errors");
-  console.log("Browser checks passed: six services, catalogue error and retry, search, registration, booking resume, confirmation, cancellation, payment history, profile persistence, admin catalogue CRUD, blocking and unblocking, role protection, sign-out, keyboard dialog behavior, and four responsive widths.");
+  console.log("Browser checks passed: six services, catalogue and category recovery, search, registration, booking resume, confirmation, cancellation, payment status retry and history, profile persistence, admin catalogue CRUD, blocking and unblocking, role protection, sign-out, keyboard navigation and dialog behavior, and four responsive widths.");
 } finally {
   await browser.close();
 }
