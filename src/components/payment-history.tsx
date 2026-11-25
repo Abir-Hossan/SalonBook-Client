@@ -11,22 +11,37 @@ export function PaymentHistory() {
   const [pages, setPages] = useState(1);
   const [retry, setRetry] = useState(0);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  function loadPage(nextPage: number) {
+    setLoading(true);
+    setError("");
+    if (nextPage === page) setRetry((value) => value + 1);
+    else setPage(nextPage);
+  }
+
   useEffect(() => {
     const controller = new AbortController();
     apiPage<Transaction>("/transactions/my?limit=20&page=" + page, { signal: controller.signal }).then((result) => {
       if (controller.signal.aborted) return;
-      setEntries(result.data);
       setPages(result.totalPages);
-      setError("");
+      if (page > result.totalPages) {
+        setPage(result.totalPages);
+        return;
+      }
+      setEntries(result.data);
+      setLoading(false);
     }).catch((failure: unknown) => {
-      if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : "Payment history could not be loaded.");
+      if (controller.signal.aborted) return;
+      setError(failure instanceof Error ? failure.message : "Payment history could not be loaded.");
+      setLoading(false);
     });
     return () => controller.abort();
   }, [page, retry]);
   return <>
     <SectionHeading eyebrow="Patron portal" title="Payment history"/>
-    {error ? <p role="alert">{error} <button type="button" onClick={() => setRetry((value) => value + 1)}>Retry</button></p>
-      : !entries ? <p role="status">Loading payments.</p>
+    {error ? <p role="alert">{error} <button type="button" onClick={() => loadPage(page)}>Retry</button></p>
+      : loading || !entries ? <p role="status">Loading payments.</p>
       : entries.length === 0 ? <p>No payments yet.</p>
       : <div className="table-wrap"><table>
         <thead><tr><th>Appointment</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
@@ -35,10 +50,10 @@ export function PaymentHistory() {
           <td>{entry.status}</td><td>{new Date(entry.createdAt).toLocaleDateString()}</td>
         </tr>)}</tbody>
       </table></div>}
-    {pages > 1 && <div className="button-row">
-      <button type="button" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</button>
+    {pages > 1 && <nav className="button-row" aria-label="Payment history pages">
+      <button type="button" disabled={loading || page <= 1} onClick={() => loadPage(page - 1)}>Previous</button>
       <span>Page {page} of {pages}</span>
-      <button type="button" disabled={page >= pages} onClick={() => setPage(page + 1)}>Next</button>
-    </div>}
+      <button type="button" disabled={loading || page >= pages} onClick={() => loadPage(page + 1)}>Next</button>
+    </nav>}
   </>;
 }

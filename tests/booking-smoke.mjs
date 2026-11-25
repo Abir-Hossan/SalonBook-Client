@@ -118,6 +118,36 @@ try {
   await page.goto(origin + "/customer/transactions");
   await page.getByText("No payments yet.").waitFor();
 
+  const paymentHistoryRequest = (url) => url.pathname === "/salon-api/transactions/my";
+  let releasePaymentPage;
+  const paymentPageDelay = new Promise((resolve) => { releasePaymentPage = resolve; });
+  await page.route(paymentHistoryRequest, async (route) => {
+    const requestedPage = Number(new URL(route.request().url()).searchParams.get("page"));
+    if (requestedPage === 2) await paymentPageDelay;
+    await route.fulfill({ json: { success: true, meta: { totalPages: 2 }, data: [{
+      id: "test-payment-" + requestedPage,
+      appointmentId: "fixture-appointment-" + requestedPage,
+      amount: 45,
+      currency: "USD",
+      status: "paid",
+      createdAt: "2026-01-01T00:00:00Z",
+    }] } });
+  });
+  await page.reload();
+  await page.getByRole("cell", { name: "fixture-appointment-1", exact: true }).waitFor();
+  const paymentPages = page.getByRole("navigation", { name: "Payment history pages" });
+  const nextPayments = paymentPages.getByRole("button", { name: "Next" });
+  try {
+    await nextPayments.click();
+    await page.getByText("Loading payments.", { exact: true }).waitFor();
+    assert.ok(await paymentPages.getByRole("button", { name: "Previous" }).isDisabled());
+    await page.getByRole("cell", { name: "fixture-appointment-1", exact: true }).waitFor({ state: "hidden" });
+  } finally {
+    releasePaymentPage();
+  }
+  await page.getByRole("cell", { name: "fixture-appointment-2", exact: true }).waitFor();
+  await page.unroute(paymentHistoryRequest);
+
   const serviceId = catalogue.data[0].id;
   const options = await (await fetch(backend + "/appointments/availability?serviceId=" + serviceId)).json();
   const nextDate = new Date(options.data.earliestDate + "T00:00:00Z");
