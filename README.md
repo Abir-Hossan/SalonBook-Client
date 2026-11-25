@@ -25,7 +25,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000. Run the server concurrently. To preview a populated catalogue before MongoDB is connected, set `SEED_DEMO_CATALOG=true` on the development server.
+Open http://localhost:3000. Run the Express server concurrently with a configured MongoDB replica set. To populate the catalogue, use the Server's `npm run seed:catalog` after building, or set `SEED_DEMO_CATALOG=true` on the development Server.
 
 ## Quality checks
 
@@ -47,6 +47,7 @@ npm run build
 - `/customer`
 - `/customer/appointments`
 - `/customer/profile`
+- `/customer/transactions`
 - `/admin`
 - `/admin/services`
 - `/admin/services/new`
