@@ -103,3 +103,67 @@
 @media(max-width:760px){
   .sanctuary-login .sanctuary-visual .sanctuary-story,.sanctuary-login .sanctuary-visual .sanctuary-features{grid-row:auto}
 }
+
+/* Authentication form controls and reference panels */
+.sanctuary-side{--auth-card:#fcf0e7;--auth-border:#e9d9ce;--auth-text:#463b35;--auth-accent:#795d39}
+.sanctuary-side h1{font-size:clamp(31px,3.08vw,62px);line-height:1.06}
+.sanctuary-side .sanctuary-intro{font-size:clamp(14px,1.13vw,22px);line-height:1.58}
+.sanctuary-form{gap:clamp(15px,1.48vw,27px)}
+.sanctuary-form :is(.sanctuary-field,.sanctuary-row>label){font-size:clamp(11px,.89vw,17px);font-weight:600;letter-spacing:.025em}
+.sanctuary-login .sanctuary-form .sanctuary-field,.sanctuary-login .sanctuary-form .sanctuary-row>label{font-size:clamp(12px,1.06vw,19px)}
+.sanctuary-field small,.sanctuary-assigned small,.sanctuary-rules small{font-size:clamp(11px,.85vw,15px);font-weight:400;letter-spacing:0;text-transform:none;color:#685b53}
+.sanctuary-field .input-icon{padding:0 clamp(11px,1.1vw,20px);gap:10px;background:#fffdfc;box-shadow:0 1px 2px #3c24100c}
+.sanctuary-field .input-icon input{font-size:clamp(14px,1.1vw,21px);letter-spacing:0}
+.sanctuary-login .sanctuary-field .input-icon{border-color:#f2e8e1}
+.sanctuary-field input::placeholder,.sanctuary-portrait input::placeholder{color:#766960;opacity:1}
+.sanctuary-field .input-icon:has([aria-invalid=true]),.sanctuary-field .input-icon:has(:user-invalid){border-color:#a33535}
+.sanctuary-field .sanctuary-row>a{color:var(--auth-accent);font-size:clamp(11px,.86vw,15px)}
+.sanctuary-form .sanctuary-consent{font-size:clamp(13px,.97vw,18px);align-items:flex-start;gap:10px}
+.sanctuary-consent input{flex:none;width:16px;height:16px;margin:3px 0 0}
+.sanctuary-form .button-dark{background:#15110f;letter-spacing:.12em;font-weight:600;box-shadow:0 3px 5px #160a061f}
+.sanctuary-form .button-dark:not(:disabled):hover{background:#30241d}
+.sanctuary-error{color:#8d2424;border:1px solid #b65050;margin:0}
+.sanctuary-mandate{background:#f5e9df;border-color:#f2d8b9;padding:clamp(14px,1.3vw,24px)}
+.sanctuary-mandate-icon,.sanctuary-role-icon{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:12px;background:#15110f;color:#f6ce93}
+.sanctuary-mandate-title{display:flex;flex-wrap:wrap;align-items:center;gap:5px 8px;text-transform:uppercase;font-size:clamp(11px,.8vw,15px)}
+.sanctuary-mandate-title>span{background:#ffdda9;color:#67491d;padding:2px 6px;border-radius:2px;letter-spacing:.06em;font-size:.92em}
+.sanctuary-portrait,.sanctuary-rules{background:var(--auth-card);border-color:var(--auth-border)}
+.sanctuary-portrait-header{align-items:flex-start}
+.sanctuary-portrait-header>div{flex:1 1 190px}
+.sanctuary-portrait-header strong,.sanctuary-rules strong{font-size:clamp(11px,.86vw,16px);font-weight:600;text-transform:uppercase}
+.sanctuary-portrait-header p{margin:3px 0 0;color:var(--auth-text)}
+.sanctuary-portrait-tabs button{text-transform:uppercase;font-size:11px}
+.sanctuary-portrait-preview{align-items:flex-start}
+.sanctuary-portrait-avatar{position:relative;display:grid;place-items:center;flex:none;width:clamp(48px,4.5vw,80px);aspect-ratio:1;border-radius:9px;background:#eddfd4;color:#795d39}
+.sanctuary-portrait-avatar img{position:absolute;inset:0;width:100%;height:100%}
+.sanctuary-portrait-badge{position:absolute;right:2px;bottom:2px;border-radius:50%;padding:2px;background:#ffdda9;color:#67491d}
+.sanctuary-portrait-control{display:grid;gap:4px;flex:1;min-width:0}
+.sanctuary-portrait-control .input-icon{background:#fff;border:1px solid var(--auth-border);border-radius:5px}
+.sanctuary-portrait-control input{font-size:clamp(12px,.92vw,17px)}
+.sanctuary-strength{width:100%;height:6px;margin-block:-9px;appearance:none;border:none;border-radius:6px;background:#ebddd2;accent-color:#8a6439}
+.sanctuary-strength::-webkit-progress-bar{background:#ebddd2;border-radius:6px}
+.sanctuary-strength::-webkit-progress-value{background:#8a6439;border-radius:6px}
+.sanctuary-rules ul{grid-template-columns:repeat(2,minmax(0,1fr));font-size:clamp(11px,.86vw,16px)}
+.sanctuary-rules li,.sanctuary-assigned small,.sanctuary-locked{display:flex;align-items:center;gap:5px}
+.sanctuary-rules li svg{flex:none}
+.sanctuary-assigned>.sanctuary-row>span{text-transform:uppercase;font-size:clamp(11px,.84vw,16px);letter-spacing:.04em}
+.sanctuary-assigned small{color:#932b28}
+.sanctuary-role-icon{background:#ffe4be;color:#795d39}
+.sanctuary-assigned .sanctuary-locked{margin-left:auto;flex:none;font-size:10px;text-transform:uppercase;border:1px solid var(--auth-border);background:#f6e9df;padding:4px}
+.sanctuary-partners button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;background:#fffdfc;color:#211914;font-size:clamp(12px,.98vw,18px)}
+.sanctuary-partners button:disabled{color:#665950}
+.sanctuary-google{font-family:Arial,sans-serif;font-weight:900;font-size:1.25em;background:conic-gradient(#4285f4 0 28%,#34a853 28% 52%,#fbbc05 52% 68%,#ea4335 68% 100%);color:transparent;background-clip:text}
+.sanctuary-switch{margin-top:clamp(10px,1vw,20px)}
+.sanctuary-register .sanctuary-concierge{width:100%;border-top:1px solid var(--auth-border);border-radius:0;background:transparent;padding:15px 0 0}
+.sanctuary-recovery:not(:target){display:none}
+.sanctuary-showcase{background:#f3e4d9;border:1px solid var(--auth-border);border-radius:6px;padding:7px;color:var(--auth-text);font-size:clamp(11px,.84vw,15px)}
+.sanctuary-register .sanctuary-showcase{background:var(--auth-card);padding:12px}
+.sanctuary-showcase strong{display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.055em;font-weight:600}
+.sanctuary-showcase-states,.sanctuary-showcase-nav>div{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.sanctuary-showcase button{padding:5px 8px;border:1px solid transparent;border-radius:2px;background:#fffbf8;color:var(--auth-text);font:inherit}
+.sanctuary-login .sanctuary-showcase-states button{flex:1;text-transform:uppercase}
+.sanctuary-register .sanctuary-showcase-states button{background:#f7e8dd}
+.sanctuary-showcase button[aria-pressed=true]{background:#15110f;color:#fff}
+.sanctuary-showcase-nav{border-top:1px solid var(--auth-border);margin-top:8px;padding-top:4px}
+.sanctuary-showcase-nav button{text-transform:uppercase;border-color:var(--auth-border)}
+@media(max-width:420px){.sanctuary-assigned .sanctuary-security{flex-wrap:wrap}.sanctuary-rules ul{grid-template-columns:1fr 1fr}}

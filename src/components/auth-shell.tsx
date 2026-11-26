@@ -4,6 +4,7 @@ import { ArrowLeft, BadgeCheck, Headset } from "lucide-react";
 import type { ReactNode } from "react";
 import { PublicHeader } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { AuthShowcasePanel, AuthShowcaseProvider } from "@/components/auth-showcase";
 import "./auth-shell.css";
 
 const content = {
@@ -24,7 +25,8 @@ const content = {
 export function AuthShell({ mode, children }: { mode: keyof typeof content; children: ReactNode }) {
   const page = content[mode];
   const register = mode === "register";
-  return <div className="sanctuary-auth">
+  const showDemo = process.env.NODE_ENV === "development";
+  const shell = <div className="sanctuary-auth">
     <PublicHeader/>
     <main className={`sanctuary-split sanctuary-${mode}`}>
       <aside className="sanctuary-visual" aria-label="The SalonBook experience">
@@ -39,11 +41,14 @@ export function AuthShell({ mode, children }: { mode: keyof typeof content; chil
         <div className="sanctuary-location"><span>Madison Ave · Bond St · Place Vendôme</span><span>Est. 2021</span></div>
       </aside>
       <section className="sanctuary-side">
+        {showDemo && register && <AuthShowcasePanel register/>}
         <Link className="sanctuary-back" href={register ? "/" : "/services"}><ArrowLeft size={17}/>{register ? "Return to Atelier Discovery" : "Return to Atelier Services"}</Link>
+        {showDemo && !register && <AuthShowcasePanel register={false}/>}
         {children}
-        <div className="sanctuary-concierge"><Headset size={15}/> <span>Concierge assistance <a href="tel:+18004287690">+1 (800) 428-7690</a></span></div>
+        <div className="sanctuary-concierge"><Headset size={15} aria-hidden="true"/> <span>{register ? "Require discreet personal booking assistance?" : "Need discreet concierge access?"} <a href="tel:+18004287690">+1 (800) 428-7690</a></span></div>
       </section>
     </main>
     <Footer auth/>
   </div>;
+  return showDemo ? <AuthShowcaseProvider>{shell}</AuthShowcaseProvider> : shell;
 }

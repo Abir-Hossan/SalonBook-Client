@@ -60,7 +60,7 @@ jobs:
             sleep 2
           done
           export BETTER_AUTH_SECRET="$(openssl rand -hex 32)"
-          export SALONBOOK_CI_ADMIN_PASSWORD="Ci-Admin-$(openssl rand -hex 16)"
+          export SALONBOOK_CI_ADMIN_PASSWORD="Ci-Admin-1$(openssl rand -hex 16)"
           echo "::add-mask::$SALONBOOK_CI_ADMIN_PASSWORD"
           echo "SALONBOOK_CI_ADMIN_PASSWORD=$SALONBOOK_CI_ADMIN_PASSWORD" >> "$GITHUB_ENV"
           (cd server-ci && npm run seed:catalog)

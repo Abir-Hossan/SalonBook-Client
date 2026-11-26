@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { api, type Account } from "@/lib/account-api";
 import { Menu, X, ArrowUpRight, UserRound } from "lucide-react";
+import { useAuthShowcase } from "./auth-showcase";
 
 const links = [
   ["Home", "/"],
@@ -14,6 +15,7 @@ const links = [
 ];
 
 export function PublicHeader() {
+  const navbarPreview = useAuthShowcase()?.navbar;
   const [open, setOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const [account, setAccount] = useState<Account>();
@@ -25,8 +27,8 @@ export function PublicHeader() {
     });
     return () => controller.abort();
   }, [pathname]);
-  const accountPath = account ? (account.role === "admin" ? "/admin" : "/customer") : "/sign-in";
-  const accountLabel = account ? "My account" : "Sign in";
+  const accountPath = navbarPreview === "guest" ? "/sign-in" : navbarPreview === "customer" ? "/customer" : account ? (account.role === "admin" ? "/admin" : "/customer") : "/sign-in";
+  const accountLabel = accountPath === "/sign-in" ? "Sign in" : "My account";
   return <header className="public-header" onKeyDown={(event) => {
     if (!open || event.key !== "Escape") return;
     event.preventDefault();
