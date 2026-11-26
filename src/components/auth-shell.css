@@ -64,3 +64,37 @@
 .sanctuary-partners>span::before,.sanctuary-partners>span::after{content:"";flex:1;border-top:1px solid var(--line)}
 .sanctuary-partners>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .sanctuary-partners button{padding:12px 6px;border:1px solid var(--line);background:var(--white);color:var(--muted);border-radius:6px}
+
+.sanctuary-auth{background:#fcf6f2}
+.sanctuary-auth .public-header{background:#fcf6f2}
+.sanctuary-auth .site-footer{background:#fcf0e7}
+.sanctuary-back{align-self:flex-start}
+.sanctuary-side .sanctuary-back{text-decoration:none}
+.sanctuary-login .sanctuary-back{color:#534740}
+.sanctuary-login .sanctuary-eyebrow::after{content:"";width:2.8em;border-top:1px solid #cdbbaa}
+.sanctuary-login .sanctuary-story{grid-row:2}
+.sanctuary-login .sanctuary-features{grid-row:3}
+.sanctuary-login .sanctuary-features div{background:#bfae963b}
+.sanctuary-register .sanctuary-badges{justify-content:flex-start}
+.sanctuary-register .sanctuary-features div{background:#cdbba171;backdrop-filter:blur(6px);padding-inline:18px}
+.sanctuary-form .sanctuary-field,.sanctuary-form .sanctuary-row>label,.sanctuary-assigned>span{font-size:clamp(11px,.9vw,18px);text-transform:uppercase;letter-spacing:.035em}
+.sanctuary-field .input-icon:focus-within{border-color:#876944;box-shadow:0 0 0 2px #8769442b}
+.sanctuary-security{display:flex;align-items:flex-start;gap:12px;border:1px solid #ebd8c9;border-radius:5px;background:#faede3;padding:clamp(12px,1.1vw,20px);font-size:clamp(12px,.94vw,17px);line-height:1.5}
+.sanctuary-security>svg{flex:none;color:#795d39}
+.sanctuary-security p{margin:4px 0 0;color:#554942}
+.sanctuary-assigned{display:grid;gap:6px}
+.sanctuary-assigned .sanctuary-security>span{display:flex;align-items:center;gap:4px;margin-left:auto;font-size:11px;text-transform:uppercase}
+.sanctuary-rules,.sanctuary-portrait,.sanctuary-recovery{border:1px solid #ebd8c9;background:#fbefe5}
+.sanctuary-rules ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,135px),1fr))}
+.sanctuary-concierge{align-self:center;padding:7px 12px;border-radius:5px;background:#faeee6}
+.sanctuary-auth :is(a,button,input):focus-visible{outline:2px solid #876944;outline-offset:3px}
+.sanctuary-partners button:disabled{cursor:default}
+@media(min-width:1001px){
+  .sanctuary-auth .header-inner{max-width:1800px}
+  .sanctuary-auth .desktop-nav a,.sanctuary-auth .header-login{font-size:clamp(10px,1vw,19px);text-transform:uppercase;letter-spacing:.08em}
+  .sanctuary-auth .header-actions .button{min-height:44px}
+  .sanctuary-register{min-height:clamp(1200px,138vw,1690px)}
+}
+@media(max-width:760px){
+  .sanctuary-login .sanctuary-visual .sanctuary-story,.sanctuary-login .sanctuary-visual .sanctuary-features{grid-row:auto}
+}

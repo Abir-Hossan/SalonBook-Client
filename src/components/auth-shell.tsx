@@ -29,7 +29,7 @@ export function AuthShell({ mode, children }: { mode: keyof typeof content; chil
     <main className={`sanctuary-split sanctuary-${mode}`}>
       <aside className="sanctuary-visual" aria-label="The SalonBook experience">
         <Image src={register ? "/images/auth-sign-up.png" : "/images/auth-sign-in.png"} alt="" fill priority sizes="(max-width: 760px) 100vw, 50vw"/>
-        <div className="sanctuary-badges"><span><b>SB</b> {page.label}</span><span><BadgeCheck size={16}/> {page.detail}</span></div>
+        <div className="sanctuary-badges"><span>{!register && <b>SB</b>} {page.label}</span><span><BadgeCheck size={16}/> {page.detail}</span></div>
         <div className="sanctuary-story">
           {!register && <span className="sanctuary-hospitality">Discreet hospitality</span>}
           <p className="sanctuary-display">{page.title}<br/><em>{page.accent}</em></p>

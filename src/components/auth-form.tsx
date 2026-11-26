@@ -6,12 +6,20 @@ import { api, json } from "@/lib/account-api";
 import { authRequest, authenticatedAccount } from "@/lib/browser-auth";
 import { getBookingDraft } from "@/mock/booking-draft";
 import { toast } from "sonner";
-import { ArrowUpRight, Mail, UserRound } from "lucide-react";
+import { ArrowUpRight, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { PasswordField } from "@/components/interactive";
 
 export function AuthForm({ register, bookingId }: { register: boolean; bookingId?: string }) {
-  const [google,setGoogle]=useState(false);
-  useEffect(()=>{api<{google:boolean}>("/auth/providers").then((data)=>setGoogle(data.google)).catch(()=>{});},[]);
+  const [google, setGoogle] = useState<boolean>();
+  useEffect(() => {
+    const controller = new AbortController();
+    api<{google: boolean}>("/auth/providers", { signal: controller.signal }).then((data) => {
+      if (!controller.signal.aborted) setGoogle(data.google);
+    }).catch(() => {
+      if (!controller.signal.aborted) setGoogle(false);
+    });
+    return () => controller.abort();
+  }, []);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -91,7 +99,7 @@ export function AuthForm({ register, bookingId }: { register: boolean; bookingId
   const portrait = portraitMode === "file" ? (portraitFile && objectUrl) : /^https:\/\//i.test(portraitUrl) ? portraitUrl : "";
   return <>
     
-    <form className="sanctuary-form" onSubmit={submit} onChange={() => setError("")}>
+    <form className="sanctuary-form" aria-busy={busy} onSubmit={submit} onChange={() => setError("")}>
       {register && <label className="sanctuary-field">Patron full name
         <span className="input-icon"><UserRound size={17}/><input name="name" autoComplete="name" required minLength={2} pattern=".*\S.*" placeholder="Your full name"/></span>
       </label>}
@@ -128,13 +136,16 @@ export function AuthForm({ register, bookingId }: { register: boolean; bookingId
           <progress value={strength} max={3} aria-label="Passphrase requirements met"/>
           <ul>{checks.map(({label, met}) => <li key={label} data-met={met}>{met ? "✓" : "○"} {label}</li>)}</ul>
         </div>
-        <div className="sanctuary-notice">Patron Account Tier · Discretionary Client</div>
+        <div className="sanctuary-assigned">
+          <span>Assigned account role</span>
+          <div className="sanctuary-security"><UserRound size={20} aria-hidden="true"/><div><strong>Patron / Customer</strong><p>Reserve services and manage your appointments.</p></div><span><LockKeyhole size={13} aria-hidden="true"/> Locked</span></div>
+        </div>
         <label className="sanctuary-consent"><input name="terms" type="checkbox" required/><span>I accept the <a href="#atelier-terms">atelier terms and privacy notice</a>.</span></label>
       </> : <label className="sanctuary-consent"><input name="remember" type="checkbox"/><span>Remember this device</span></label>}
       <button className="button button-dark button-full" disabled={busy}>{busy ? "Please wait…" : register ? "Create Patron Account" : "Sign In to Your Sanctuary"} <ArrowUpRight size={16}/></button>
       {error && <p className="sanctuary-notice" role="alert">{error}</p>}
     </form>
-    <div className="sanctuary-partners" aria-label="Atelier partners"><span>Atelier partners</span><div>{google ? <button type="button" className="button button-outline" disabled={busy} onClick={continueWithGoogle}>Continue with Google</button> : <button type="button" disabled>Google unavailable</button>}<button type="button" disabled>Apple unavailable</button></div></div>
+    <div className="sanctuary-partners" aria-label="Atelier partners"><span>Or continue with atelier partners</span><div><button type="button" className="button button-outline" disabled={busy || google !== true} onClick={continueWithGoogle}>{google === undefined ? "Checking Google sign-in" : google ? "Continue with Google" : "Google unavailable"}</button><button type="button" disabled>Apple unavailable</button></div></div>
     <p className="sanctuary-switch">{register ? "Already hold an atelier profile?" : "New to our sanctuary?"}{" "}
       <Link href={(register ? "/sign-in" : "/sign-up") + bookingQuery}>{register ? "Sign In to Your Sanctuary" : "Create an Atelier Account"}</Link>
     </p>

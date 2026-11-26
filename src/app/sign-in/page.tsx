@@ -14,7 +14,7 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<{
     <div>
       <p className="sanctuary-eyebrow">Patron authentication</p>
       <h1>Sign In to SalonBook</h1>
-      <p className="sanctuary-intro">Access your appointments, saved artisans, and bespoke itineraries when account services are available.</p>
+      <p className="sanctuary-intro">Enter your credentials to access your appointments and manage your bookings.</p>
     </div>
     {(error || (resume === "1" && !account)) && <p className="sanctuary-notice" role="alert">Google sign-in could not be completed. Try again or sign in with your account password.</p>}
     {bookingId && <BookingSignInPreview bookingId={bookingId} signedIn={account?.role === "customer"}/>}

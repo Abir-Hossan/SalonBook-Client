@@ -79,6 +79,7 @@ try {
   const appointment = page.locator(".appointment-card").filter({ hasText: catalogue.data[0].serviceName });
   await appointment.waitFor();
   await appointment.getByText("Pending", { exact: true }).waitFor();
+  await appointment.getByText("Payment opens after confirmation.").waitFor();
   const id = await appointment.locator(".eyebrow").textContent();
 
   const adminContext = await browser.newContext();
@@ -105,6 +106,29 @@ try {
   await page.keyboard.press("Escape");
   await dialog.waitFor({ state: "hidden" });
   assert.equal(await details.evaluate((element) => element === document.activeElement), true);
+
+  await appointment.getByText("Online payments are currently unavailable.", { exact: false }).waitFor();
+  await page.route("**/salon-api/payments/availability", (route) => route.fulfill({ json: { success: true, data: { stripe: true } } }));
+  await appointment.getByRole("button", { name: "Check again" }).click();
+  const payNow = appointment.getByRole("button", { name: "Pay now" });
+  const checkoutApi = "**/salon-api/payments/checkout";
+  const checkoutUrl = "https://checkout.stripe.com/c/pay/cs_test_browser_fixture";
+  let checkoutRequests = 0;
+  await page.route(checkoutApi, (route) => {
+    checkoutRequests++;
+    assert.deepEqual(route.request().postDataJSON(), { appointmentId: id });
+    return checkoutRequests === 1
+      ? route.fulfill({ status: 502, json: { success: false, message: "Checkout could not be reached. Try again." } })
+      : route.fulfill({ json: { success: true, data: { url: checkoutUrl } } });
+  });
+  await page.route(checkoutUrl, (route) => route.fulfill({ contentType: "text/html", body: "<h1>Isolated checkout fixture</h1>" }));
+  await payNow.click();
+  await page.getByRole("alert").filter({ hasText: "Checkout could not be reached." }).waitFor();
+  await payNow.click();
+  await page.waitForURL(checkoutUrl);
+  assert.equal(checkoutRequests, 2);
+  await page.unroute(checkoutApi);
+  await page.unroute("**/salon-api/payments/availability");
 
   const paymentStatusRequest = "**/salon-api/appointments/" + id;
   await page.route(paymentStatusRequest, (route) => route.abort());
@@ -232,6 +256,27 @@ try {
   await page.waitForURL("**/sign-in");
   await page.goto(origin + "/customer");
   await page.waitForURL("**/sign-in");
+
+  await page.getByLabel("Patron email address").fill(email);
+  const signInPassword = page.getByLabel("Private security passphrase");
+  await signInPassword.fill("Invalid-" + password);
+  await signInPassword.press("Enter");
+  await page.locator(".sanctuary-form [role='alert']").waitFor();
+  await signInPassword.fill(password);
+  await signInPassword.press("Enter");
+  await page.waitForURL("**/customer");
+
+  const duplicateContext = await browser.newContext();
+  const duplicatePage = await pageFor(duplicateContext);
+  await duplicatePage.goto(origin + "/sign-up");
+  await duplicatePage.getByText("Patron account registration", { exact: true }).waitFor();
+  await duplicatePage.getByLabel("Patron full name").fill("Duplicate CI Patron");
+  await duplicatePage.getByLabel("Patron email address").fill(email);
+  await duplicatePage.getByLabel("Private security passphrase").fill(password);
+  await duplicatePage.locator('input[name="terms"]').check();
+  await duplicatePage.getByRole("button", { name: "Create Patron Account" }).click();
+  await duplicatePage.locator(".sanctuary-form [role='alert']").waitFor();
+  await duplicateContext.close();
 
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto(origin);
