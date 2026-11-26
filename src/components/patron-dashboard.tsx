@@ -1,13 +1,13 @@
 "use client";
 
-import { useDeferredValue, useEffect, useState, type FormEvent } from "react";
+import { useDeferredValue, useEffect, useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, CalendarDays, CheckCircle2, Clock3, Wallet } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { EmptyState, SectionHeading, StatCard, StatusPill } from "@/components/ui";
 import { ConfirmButton, SearchInput } from "@/components/interactive";
-import { api, apiPage, json, type Account, type ApiAppointment } from "@/lib/account-api";
+import { api, ApiError, apiPage, json, type Account, type ApiAppointment } from "@/lib/account-api";
 import { dateLabel, money } from "@/lib/utils";
 type Stats = { totalAppointments: number; pending: number; confirmed: number; cancelled: number };
 
@@ -19,7 +19,10 @@ export function PatronDashboard({ account, mode }: { account: Account; mode: "ov
 
 function PatronAppointments({ account, overview }: { account: Account; overview: boolean }) {
   const [rows, setRows] = useState<ApiAppointment[]>([]);
-  const [canPay, setCanPay] = useState(false);
+  const [checkoutAvailability, setCheckoutAvailability] = useState<"loading" | "ready" | "unavailable">("loading");
+  const [checkoutRetry, setCheckoutRetry] = useState(0);
+  const checkoutInProgress = useRef(false);
+  const [checkoutError, setCheckoutError] = useState("");
   const [paying, setPaying] = useState<string>();
   const [stats, setStats] = useState<Stats>();
   const [status, setStatus] = useState("all");
@@ -34,6 +37,17 @@ function PatronAppointments({ account, overview }: { account: Account; overview:
   const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
+    if (overview) return;
+    const controller = new AbortController();
+    api<{ stripe: boolean }>("/payments/availability", { signal: controller.signal }).then(({ stripe }) => {
+      if (!controller.signal.aborted) setCheckoutAvailability(stripe ? "ready" : "unavailable");
+    }).catch(() => {
+      if (!controller.signal.aborted) setCheckoutAvailability("unavailable");
+    });
+    return () => controller.abort();
+  }, [overview, checkoutRetry]);
+
+  useEffect(() => {
     const controller = new AbortController();
     async function load() {
       setLoading(true);
@@ -44,7 +58,6 @@ function PatronAppointments({ account, overview }: { account: Account; overview:
         if (!overview && queryText.trim()) query.set("q", queryText.trim());
         if (status !== "all" && !overview) query.set("status", status);
         const options = { signal: controller.signal };
-        if (!overview) api<{stripe:boolean}>("/payments/availability", options).then((availability) => { if (!controller.signal.aborted) setCanPay(availability.stripe); }).catch(() => {});
         const [appointments, summary] = await Promise.all([
           apiPage<ApiAppointment>("/appointments/my?" + query, options),
           overview ? api<Stats>("/customer/dashboard/stats", options) : Promise.resolve(undefined),
@@ -77,14 +90,24 @@ function PatronAppointments({ account, overview }: { account: Account; overview:
     }
   }
 
-  async function pay(id: string) {
-    setPaying(id);
-    setError("");
+  async function pay(row: ApiAppointment) {
+    if (checkoutInProgress.current || checkoutAvailability !== "ready" || row.status !== "confirmed" || row.paymentStatus !== "unpaid") return;
+    checkoutInProgress.current = true;
+    setPaying(row.id);
+    setCheckoutError("");
     try {
-      const { url } = await api<{ url: string }>("/payments/checkout", json("POST", { appointmentId: id }));
-      window.location.assign(url);
+      const { url } = await api<{ url: string }>("/payments/checkout", json("POST", { appointmentId: row.id }));
+      let destination: URL | undefined;
+      try { destination = new URL(url); } catch {}
+      if (destination?.origin !== "https://checkout.stripe.com" || destination.username || destination.password) {
+        throw new Error("The checkout link could not be verified.");
+      }
+      window.location.assign(destination.href);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Checkout failed.");
+      setCheckoutError(failure instanceof Error ? failure.message : "Checkout failed.");
+      if (failure instanceof ApiError && [404, 409, 422].includes(failure.status)) setRefresh((value) => value + 1);
+      if (failure instanceof ApiError && failure.status === 503) setCheckoutAvailability("unavailable");
+      checkoutInProgress.current = false;
       setPaying(undefined);
     }
   }
@@ -107,11 +130,20 @@ function PatronAppointments({ account, overview }: { account: Account; overview:
       </div>
     </>}
     {notice && <p role="status">{notice}</p>}
+    {checkoutError && <p role="alert">{checkoutError}</p>}
     {error && <p role="alert">{error} <button className="table-action" onClick={() => setRefresh((value) => value + 1)}>Retry</button></p>}
     {loading ? <p role="status">Loading appointments…</p> : rows.length ? <div className="appointment-list">{rows.map((row) => <article key={row.id} className="appointment-card">
       {row.serviceImage && <Image src={row.serviceImage} width={110} height={110} alt=""/>}
       <div className="appointment-card-main"><span className="eyebrow">{row.id}</span><h3>{row.serviceName ?? "Appointment"}</h3><p>{dateLabel(row.appointmentDate)} · {row.timeSlot}</p><div className="appointment-badges"><StatusPill status={row.status}/><StatusPill status={row.paymentStatus}/></div><button className="table-action" onClick={() => setSelected(row)}>View details</button></div>
-      <div className="appointment-card-end"><b>{money(row.servicePrice)}</b>{!overview && canPay && row.status === "confirmed" && row.paymentStatus === "unpaid" && <button className="button button-dark button-xs" disabled={Boolean(paying)} onClick={() => void pay(row.id)}>{paying === row.id ? "Opening checkout…" : "Pay now"}</button>}{!overview && row.status === "pending" && <ConfirmButton label="Cancel appointment" confirmTitle="Cancel this appointment?" confirmText="It will stay in your history." onConfirm={() => { void cancel(row.id); return false; }}/>}</div>
+      <div className="appointment-card-end"><b>{money(row.servicePrice)}</b>{row.paymentStatus === "unpaid" && row.status === "pending" && <small>Payment opens after confirmation.</small>}
+        {row.paymentStatus === "unpaid" && row.status === "confirmed" && (overview
+          ? <Link className="table-action" href="/customer/appointments">Go to appointment payment</Link>
+          : checkoutAvailability === "ready"
+            ? <button type="button" className="button button-dark button-xs" disabled={Boolean(paying)} onClick={() => void pay(row)}>{paying === row.id ? "Opening checkout." : "Pay now"}</button>
+            : <small role="status">{checkoutAvailability === "loading" ? "Checking payment availability." : "Online payments are currently unavailable."} {checkoutAvailability === "unavailable" && <button type="button" className="table-action" onClick={() => {
+              setCheckoutAvailability("loading");
+              setCheckoutRetry((value) => value + 1);
+            }}>Check again</button>}</small>)}{!overview && row.status === "pending" && <ConfirmButton label="Cancel appointment" confirmTitle="Cancel this appointment?" confirmText="It will stay in your history." onConfirm={() => { void cancel(row.id); return false; }}/>}</div>
     </article>)}</div> : !error && <EmptyState title="No appointments found" description="Browse services to plan your next visit." action={<Link href="/services">Explore services</Link>}/>}
     {!overview && totalPages > 1 && <div className="button-row"><button type="button" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</button><span>Page {page} of {totalPages}</span><button type="button" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</button></div>}
     {selected && <dialog className="confirmation-dialog" aria-label="Appointment details" ref={(dialog) => { if (dialog && !dialog.open) dialog.showModal(); }} onClose={() => setSelected(undefined)}><h3>{selected.serviceName ?? "Appointment"}</h3><p>{dateLabel(selected.appointmentDate)} · {selected.timeSlot}</p><p>{money(selected.servicePrice)} · {selected.status} · {selected.paymentStatus}</p>{selected.serviceDuration && <p>{selected.serviceDuration} minutes</p>}{selected.message && <p>{selected.message}</p>}<form method="dialog"><button className="button button-outline">Close</button></form></dialog>}
