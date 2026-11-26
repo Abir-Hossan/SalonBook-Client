@@ -17,6 +17,7 @@ export async function currentAccount() {
 
 export async function requireAccount(role: Account["role"]) {
   const account = await currentAccount();
-  if (!account || account.role !== role) redirect("/sign-in");
+  if (!account) redirect("/sign-in");
+  if (account.role !== role) redirect(role === "admin" ? "/sign-in?reason=admin-required" : "/sign-in");
   return account;
 }

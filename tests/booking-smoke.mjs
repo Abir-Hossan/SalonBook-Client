@@ -106,6 +106,8 @@ try {
   await admin.getByLabel("Private security passphrase").fill(process.env.SALONBOOK_CI_ADMIN_PASSWORD);
   await admin.getByRole("button", { name: "Sign In to Your Sanctuary" }).click();
   await admin.waitForURL("**/admin");
+  await admin.getByRole("heading", { name: "Dashboard overview" }).waitFor();
+  assert.equal((await admin.request.get(origin + "/salon-api/admin/dashboard/stats")).status(), 200);
   await admin.goto(origin + "/admin/appointments");
   const managed = admin.getByRole("row").filter({ hasText: id });
   await managed.getByRole("button", { name: "Confirm", exact: true }).click();
@@ -266,7 +268,11 @@ try {
   await patronRow.getByText("Active", { exact: true }).waitFor();
 
   await page.goto(origin + "/admin");
-  await page.waitForURL("**/sign-in");
+  await page.waitForURL("**/sign-in?reason=admin-required");
+  await page.getByRole("alert").filter({ hasText: "Admin access requires an administrator account." }).waitFor();
+  const forbiddenStats = await page.request.get(origin + "/salon-api/admin/dashboard/stats");
+  assert.equal(forbiddenStats.status(), 403);
+  assert.equal((await forbiddenStats.json()).errors[0].code, "FORBIDDEN");
 
   await page.goto(origin + "/customer");
   await page.getByRole("button", { name: "Sign out" }).click();
