@@ -69,7 +69,7 @@
 .sanctuary-auth .public-header{background:#fcf6f2}
 .sanctuary-auth .site-footer{background:#fcf0e7}
 .sanctuary-back{align-self:flex-start}
-.sanctuary-side .sanctuary-back{text-decoration:none}
+.sanctuary-side a.sanctuary-back:not(.button){text-decoration:none}
 .sanctuary-login .sanctuary-back{color:#534740}
 .sanctuary-login .sanctuary-eyebrow::after{content:"";width:2.8em;border-top:1px solid #cdbbaa}
 .sanctuary-login .sanctuary-story{grid-row:2}
@@ -79,6 +79,8 @@
 .sanctuary-register .sanctuary-features div{background:#cdbba171;backdrop-filter:blur(6px);padding-inline:18px}
 .sanctuary-form .sanctuary-field,.sanctuary-form .sanctuary-row>label,.sanctuary-assigned>span{font-size:clamp(11px,.9vw,18px);text-transform:uppercase;letter-spacing:.035em}
 .sanctuary-field .input-icon:focus-within{border-color:#876944;box-shadow:0 0 0 2px #8769442b}
+.sanctuary-field .input-icon input{flex:1;min-width:0}
+.sanctuary-field .password-toggle{flex:none;margin-left:auto;min-width:34px;min-height:34px}
 .sanctuary-security{display:flex;align-items:flex-start;gap:12px;border:1px solid #ebd8c9;border-radius:5px;background:#faede3;padding:clamp(12px,1.1vw,20px);font-size:clamp(12px,.94vw,17px);line-height:1.5}
 .sanctuary-security>svg{flex:none;color:#795d39}
 .sanctuary-security p{margin:4px 0 0;color:#554942}
@@ -88,6 +90,9 @@
 .sanctuary-rules ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,135px),1fr))}
 .sanctuary-concierge{align-self:center;padding:7px 12px;border-radius:5px;background:#faeee6}
 .sanctuary-auth :is(a,button,input):focus-visible{outline:2px solid #876944;outline-offset:3px}
+.sanctuary-auth .footer-main p,.sanctuary-auth .footer-main a:not(.brand){color:#51453e;font-size:clamp(12px,1.05vw,19px)}
+.sanctuary-auth .footer-main>div>b{font-size:clamp(12px,1.05vw,19px);letter-spacing:.03em}
+.sanctuary-auth .footer-bottom{font-size:clamp(11px,.86vw,16px)}
 .sanctuary-partners button:disabled{cursor:default}
 @media(min-width:1001px){
   .sanctuary-auth .header-inner{max-width:1800px}

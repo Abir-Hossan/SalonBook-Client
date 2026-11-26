@@ -260,6 +260,10 @@ try {
   await page.getByLabel("Patron email address").fill(email);
   const signInPassword = page.getByLabel("Private security passphrase");
   await signInPassword.fill("Invalid-" + password);
+  await page.getByRole("button", { name: "Show password" }).click();
+  assert.equal(await signInPassword.getAttribute("type"), "text");
+  await page.getByRole("button", { name: "Hide password" }).click();
+  assert.equal(await signInPassword.getAttribute("type"), "password");
   await signInPassword.press("Enter");
   await page.locator(".sanctuary-form [role='alert']").waitFor();
   await signInPassword.fill(password);
