@@ -1,23 +1,20 @@
 # SalonBook Client
 
-Luxury salon appointment-booking frontend built with Next.js App Router, React, TypeScript, and Tailwind CSS.
+SalonBook is a salon appointment booking application. This repository contains the Next.js frontend for the public catalogue, customer portal, and administration dashboard. The companion [SalonBook Server](https://github.com/Abir-Hossan/SalonBook-Server) provides the API and stores application data.
 
-## Application scope
+## What the app does
 
-- Public home, service catalogue, service details, sign-in/sign-up, payment result and error pages
-- Customer overview, appointments, and profile
-- Admin overview, service management, appointment management, customer management, transactions, and profile
-- Responsive public, customer and administration layouts
-- Loading, empty, error, success, and confirmation UI states
+| Area | Features |
+| --- | --- |
+| Public catalogue | Browse, search, filter, and sort services. View service details and available times. |
+| Customer portal | Create an account, request an appointment, manage upcoming bookings, and view payment history. |
+| Admin dashboard | Manage services and customers, confirm appointments, and review transactions. |
 
-The public catalogue, booking availability, Better Auth, dashboards and payments use the Express API through Next.js rewrites. Booking drafts are saved in the originating browser tab until authentication. Submitting a real booking writes to the Server. The customer portal includes payment history.
+A customer submits a booking request, an administrator confirms it, and the customer can then pay for the confirmed appointment using Stripe Checkout in test mode. A draft can be resumed in the originating browser tab after sign-in. The `/demo` pages use local sample data.
 
-## Requirements
+## Local setup
 
-- Node.js 20.9+ (Node 22 LTS recommended)
-- npm 10+
-
-## Setup
+Use Node.js 24 and npm 10 or newer. Start the [companion API](https://github.com/Abir-Hossan/SalonBook-Server#local-setup) with a local MongoDB replica set.
 
 ```bash
 npm ci
@@ -25,44 +22,21 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000. Run the Express server concurrently with a configured MongoDB replica set. To populate the catalogue, use the Server's `npm run seed:catalog` after building, or set `SEED_DEMO_CATALOG=true` on the development Server.
+Open [http://localhost:3000](http://localhost:3000). The example environment points `SALONBOOK_API_URL` to `http://127.0.0.1:5000/api`. Keep the frontend origin consistent with the Server's authentication and CORS settings. If the catalogue is empty, seed the local database from the Server repository.
 
-## Quality checks
+## Verification
 
 ```bash
+node --test tests/api-target.test.mjs
 npm run typecheck
 npm run lint
 npm run build
 ```
 
-## Routes
-
-- `/`
-- `/services`
-- `/services/[id]`
-- `/sign-in`
-- `/sign-up`
-- `/payment/success`
-- `/payment/cancel`
-- `/customer`
-- `/customer/appointments`
-- `/customer/profile`
-- `/customer/transactions`
-- `/admin`
-- `/admin/services`
-- `/admin/services/new`
-- `/admin/services/[id]/edit`
-- `/admin/appointments`
-- `/admin/users`
-- `/admin/transactions`
-- `/admin/profile`
+The GitHub Actions browser job runs the booking smoke test in Chromium against the companion API and a disposable MongoDB replica set.
 
 ## Deployment
 
-Set `SALONBOOK_API_URL` to the public HTTPS Express URL ending in `/api` before building on Vercel. For the public Client deployment, the current API target is `https://salonbook-server-p0f1.onrender.com/api`. Vercel Preview and Production have independent environment settings. For full preview acceptance, set the Preview target to an isolated HTTPS API and configure that API to trust the stable preview Client origin for Better Auth.
+Set `SALONBOOK_API_URL` in the Vercel environment to the corresponding HTTPS API URL ending in `/api`. Use independent Preview and Production values. The Server must trust the exact browser origin used for authentication. For a protected Preview, sign in to Vercel in the same browser used to test provider redirects.
 
-The Client validates the API target before compilation and uses the same target for rewrites and server-side reads. Run `node --test tests/api-target.test.mjs` using Node 24 to check the configuration contract. A successful production build with the CI fixture URL verifies compilation. Use the deployed Client's `/salon-api/health` and the Server's `/api/ready` to verify deployed connectivity.
-
-The explicitly labelled `/demo` routes use local preview data. Public and authenticated booking flows use the real API.
-
-[Project status and server deployment](https://github.com/Abir-Hossan/SalonBook-Server/blob/completion/assignment-readiness/PROJECT_STATUS.md)
+Verify a deployment with the frontend's `/salon-api/health` route and the API's `/api/ready` route. For screen references and asset provenance, see the [design mapping](FIGMA_SCREEN_MAPPING.md).
