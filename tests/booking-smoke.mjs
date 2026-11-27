@@ -1,0 +1,335 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+
+const { chromium } = await import(pathToFileURL(join(process.env.RUNNER_TEMP, "salonbook-e2e/node_modules/playwright/index.mjs")).href);
+const browser = await chromium.launch();
+const origin = "http://127.0.0.1:3000";
+const backend = "http://127.0.0.1:5000/api";
+const password = "BrowserCi-1" + randomUUID();
+const email = randomUUID() + "@example.test";
+const errors = [];
+
+async function pageFor(context) {
+  const page = await context.newPage();
+  page.on("pageerror", (error) => errors.push(error.message));
+  return page;
+}
+
+try {
+  const customer = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await pageFor(customer);
+  await page.goto(origin);
+  await page.getByRole("heading", { name: "Signature Offerings" }).waitFor();
+  const catalogue = await (await fetch(backend + "/services?limit=6")).json();
+  assert.equal(catalogue.data.length, 6);
+  for (const service of catalogue.data) await page.getByRole("heading", { name: service.serviceName, exact: true }).waitFor();
+
+  const catalogueRequests = "**/catalogue-api/services?*";
+  const categoryRequests = "**/catalogue-api/services/categories";
+  await page.route(catalogueRequests, (route) => route.fulfill({ status: 200, contentType: "text/html", body: "<html><title>Service warming up</title></html>" }));
+  await page.route(categoryRequests, (route) => route.abort());
+  await page.goto(origin + "/services");
+  await page.getByRole("heading", { name: "Catalogue unavailable" }).waitFor();
+  await page.unroute(catalogueRequests);
+  await page.getByRole("button", { name: "Try again" }).click();
+  await page.getByText("Service categories could not load.").waitFor();
+  await page.unroute(categoryRequests);
+  await page.getByRole("button", { name: "Retry categories", exact: true }).click();
+  await page.getByRole("group", { name: "Filter by category" })
+    .getByRole("button", { name: catalogue.data[0].category, exact: true }).waitFor();
+  const search = page.getByPlaceholder("Search by treatment name...");
+  await search.fill(catalogue.data[0].serviceName);
+  const serviceName = page.getByRole("heading", { name: catalogue.data[0].serviceName, exact: true });
+  await serviceName.waitFor();
+  await page.getByText("Showing 1 of 1 services").waitFor();
+  await page.getByRole("link", { name: catalogue.data[0].serviceName, exact: true }).click();
+  const timeSelect = page.locator(".booking-panel select");
+  await timeSelect.locator("option").filter({ hasText: "09:30 AM" }).waitFor({ state: "attached" });
+  await timeSelect.selectOption({ label: "09:30 AM" });
+  const bookingDate = page.getByLabel("Preferred date");
+  const originalDate = await bookingDate.inputValue();
+  const unavailableDate = new Date(originalDate + "T00:00:00Z");
+  unavailableDate.setUTCDate(unavailableDate.getUTCDate() + 1);
+  const rejectedDate = unavailableDate.toISOString().slice(0, 10);
+  const availabilityRequest = (url) => url.pathname === "/salon-api/appointments/availability" && url.searchParams.get("date") === rejectedDate;
+  await page.route(availabilityRequest, (route) => route.fulfill({ status: 422, json: { success: false, message: "Date unavailable" } }));
+  await bookingDate.fill(rejectedDate);
+  await page.getByText("Your selected date is no longer bookable.", { exact: false }).waitFor();
+  await page.unroute(availabilityRequest);
+  await timeSelect.locator("option").filter({ hasText: "09:30 AM" }).waitFor({ state: "attached" });
+  assert.equal(await bookingDate.inputValue(), originalDate);
+  assert.equal(await timeSelect.inputValue(), "");
+  assert.ok(await page.getByRole("button", { name: "Continue to sign in" }).isDisabled());
+  await timeSelect.selectOption({ label: "09:30 AM" });
+  await page.getByRole("button", { name: "Continue to sign in" }).click();
+  await page.waitForURL(/\/sign-in\?booking=/);
+  await page.getByRole("button", { name: "Auth Fail", exact: true }).click();
+  await page.getByText("Preview: the email address or passphrase is incorrect.").waitFor();
+  assert.ok(await page.getByRole("button", { name: "Sign In to Your Sanctuary" }).isDisabled());
+  await page.getByRole("button", { name: "Normal", exact: true }).click();
+  await page.getByRole("link", { name: "Create an Atelier Account" }).click();
+  await page.getByRole("button", { name: "Authenticated Nav" }).click();
+  await page.getByRole("link", { name: "My account", exact: true }).waitFor();
+  assert.equal((await page.request.get(origin + "/salon-api/auth/me")).status(), 401);
+  await page.getByRole("button", { name: "Guest Nav" }).click();
+  await page.getByRole("button", { name: "Success & Redirect" }).click();
+  await page.getByText("Preview: verified state. No session was created and no redirect was made.").waitFor();
+  await page.getByRole("button", { name: "Standard Form" }).click();
+  await page.getByRole("button", { name: "Google unavailable" }).waitFor();
+  assert.ok(await page.getByRole("button", { name: "Apple unavailable" }).isDisabled());
+  await page.getByLabel("Full name", { exact: true }).fill("CI Patron");
+  await page.getByLabel("Confidential email address").fill(email);
+  const registrationPassphrase = page.getByLabel("Security passphrase", { exact: true });
+  await registrationPassphrase.fill("WeakPass");
+  assert.equal(await registrationPassphrase.evaluate((input) => input.validity.patternMismatch), true);
+  await registrationPassphrase.fill(password);
+  await page.getByText("4 of 4 satisfied").waitFor();
+  await page.locator('input[name="terms"]').check();
+  await page.getByRole("button", { name: "Create Patron Account" }).click();
+  await page.waitForURL(/\/services\/[^/]+\?booking=/);
+  await page.reload();
+  const submit = page.getByRole("button", { name: "Request appointment", exact: true });
+  await submit.click();
+  await page.waitForURL("**/customer/appointments");
+  const appointment = page.locator(".appointment-card").filter({ hasText: catalogue.data[0].serviceName });
+  await appointment.waitFor();
+  await appointment.getByText("Pending", { exact: true }).waitFor();
+  await appointment.getByText("Payment opens after confirmation.").waitFor();
+  const id = await appointment.locator(".eyebrow").textContent();
+
+  const adminContext = await browser.newContext();
+  const admin = await pageFor(adminContext);
+  await admin.goto(origin + "/sign-in");
+  await admin.getByLabel("Patron email address").fill("admin@example.test");
+  await admin.getByLabel("Private security passphrase").fill(process.env.SALONBOOK_CI_ADMIN_PASSWORD);
+  await admin.getByRole("button", { name: "Sign In to Your Sanctuary" }).click();
+  await admin.waitForURL("**/admin");
+  await admin.getByRole("heading", { name: "Dashboard overview" }).waitFor();
+  assert.equal((await admin.request.get(origin + "/salon-api/admin/dashboard/stats")).status(), 200);
+  await admin.goto(origin + "/admin/appointments");
+  const managed = admin.getByRole("row").filter({ hasText: id });
+  await managed.getByRole("button", { name: "Confirm", exact: true }).click();
+  await managed.getByText("Confirmed", { exact: true }).waitFor();
+  await page.reload();
+  await appointment.getByText("Confirmed", { exact: true }).waitFor();
+  const details = appointment.getByRole("button", { name: "View details" });
+  await details.click();
+  const dialog = page.getByRole("dialog", { name: "Appointment details" });
+  await dialog.waitFor();
+  assert.equal(await dialog.evaluate((element) => element.contains(document.activeElement)), true);
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  assert.equal(await dialog.evaluate((element) => element.contains(document.activeElement)), true);
+  await page.keyboard.press("Escape");
+  await dialog.waitFor({ state: "hidden" });
+  assert.equal(await details.evaluate((element) => element === document.activeElement), true);
+
+  await appointment.getByText("Online payments are currently unavailable.", { exact: false }).waitFor();
+  await page.route("**/salon-api/payments/availability", (route) => route.fulfill({ json: { success: true, data: { stripe: true } } }));
+  await appointment.getByRole("button", { name: "Check again" }).click();
+  const payNow = appointment.getByRole("button", { name: "Pay now" });
+  const checkoutApi = "**/salon-api/payments/checkout";
+  const checkoutUrl = "https://checkout.stripe.com/c/pay/cs_test_browser_fixture";
+  let checkoutRequests = 0;
+  await page.route(checkoutApi, (route) => {
+    checkoutRequests++;
+    assert.deepEqual(route.request().postDataJSON(), { appointmentId: id });
+    return checkoutRequests === 1
+      ? route.fulfill({ status: 502, json: { success: false, message: "Checkout could not be reached. Try again." } })
+      : route.fulfill({ json: { success: true, data: { url: checkoutUrl } } });
+  });
+  await page.route(checkoutUrl, (route) => route.fulfill({ contentType: "text/html", body: "<h1>Isolated checkout fixture</h1>" }));
+  await payNow.click();
+  await page.getByRole("alert").filter({ hasText: "Checkout could not be reached." }).waitFor();
+  await payNow.click();
+  await page.waitForURL(checkoutUrl);
+  assert.equal(checkoutRequests, 2);
+  await page.unroute(checkoutApi);
+  await page.unroute("**/salon-api/payments/availability");
+
+  const paymentStatusRequest = "**/salon-api/appointments/" + id;
+  await page.route(paymentStatusRequest, (route) => route.abort());
+  await page.goto(origin + "/payment/success?appointment=" + id);
+  await page.getByText("Payment status is unavailable.", { exact: false }).waitFor();
+  await page.unroute(paymentStatusRequest);
+  await page.getByRole("button", { name: "Check payment status again" }).click();
+  await page.getByText("Payment confirmation is pending.", { exact: false }).waitFor();
+  await page.goto(origin + "/payment/cancel");
+  await page.getByText("Check your appointment status.", { exact: false }).waitFor();
+  await page.goto(origin + "/customer/transactions");
+  await page.getByText("No payments yet.").waitFor();
+
+  const paymentHistoryRequest = (url) => url.pathname === "/salon-api/transactions/my";
+  let releasePaymentPage;
+  const paymentPageDelay = new Promise((resolve) => { releasePaymentPage = resolve; });
+  await page.route(paymentHistoryRequest, async (route) => {
+    const requestedPage = Number(new URL(route.request().url()).searchParams.get("page"));
+    if (requestedPage === 2) await paymentPageDelay;
+    await route.fulfill({ json: { success: true, meta: { totalPages: 2 }, data: [{
+      id: "test-payment-" + requestedPage,
+      appointmentId: "fixture-appointment-" + requestedPage,
+      amount: 45,
+      currency: "USD",
+      status: "paid",
+      createdAt: "2026-01-01T00:00:00Z",
+    }] } });
+  });
+  await page.reload();
+  await page.getByRole("cell", { name: "fixture-appointment-1", exact: true }).waitFor();
+  const paymentPages = page.getByRole("navigation", { name: "Payment history pages" });
+  const nextPayments = paymentPages.getByRole("button", { name: "Next" });
+  try {
+    await nextPayments.click();
+    await page.getByText("Loading payments.", { exact: true }).waitFor();
+    assert.ok(await paymentPages.getByRole("button", { name: "Previous" }).isDisabled());
+    await page.getByRole("cell", { name: "fixture-appointment-1", exact: true }).waitFor({ state: "hidden" });
+  } finally {
+    releasePaymentPage();
+  }
+  await page.getByRole("cell", { name: "fixture-appointment-2", exact: true }).waitFor();
+  await page.unroute(paymentHistoryRequest);
+
+  const serviceId = catalogue.data[0].id;
+  const options = await (await fetch(backend + "/appointments/availability?serviceId=" + serviceId)).json();
+  const nextDate = new Date(options.data.earliestDate + "T00:00:00Z");
+  nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+  await page.goto(origin + "/services/" + serviceId);
+  await timeSelect.locator("option").nth(1).waitFor({ state: "attached" });
+  await page.locator('.booking-panel input[type="date"]').fill(nextDate.toISOString().slice(0, 10));
+  await timeSelect.locator("option").filter({ hasText: "09:30 AM" }).waitFor({ state: "attached" });
+  await timeSelect.selectOption({ label: "09:30 AM" });
+  await submit.click();
+  await page.waitForURL("**/customer/appointments");
+  const pending = page.locator(".appointment-card").filter({ has: page.getByText("Pending", { exact: true }) });
+  const cancelledId = await pending.locator(".eyebrow").textContent();
+  await pending.getByRole("button", { name: "Cancel appointment" }).click();
+  await pending.getByRole("button", { name: "Confirm", exact: true }).click();
+  await page.locator(".appointment-card").filter({ hasText: cancelledId }).getByText("Cancelled", { exact: true }).waitFor();
+
+  await page.goto(origin + "/customer/profile");
+  await page.getByLabel("Full name").fill("Updated CI Patron");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await page.getByText("Profile saved.", { exact: false }).waitFor();
+  await page.reload();
+  assert.equal(await page.getByLabel("Full name").inputValue(), "Updated CI Patron");
+
+  await page.setViewportSize({ width: 390, height: 900 });
+  const dashboardMenu = page.getByRole("button", { name: "Toggle navigation" });
+  const dashboardNav = page.getByRole("navigation", { name: "Dashboard navigation" });
+  await dashboardNav.waitFor({ state: "hidden" });
+  await dashboardMenu.focus();
+  await page.keyboard.press("Enter");
+  await dashboardNav.waitFor();
+  assert.equal(await dashboardMenu.getAttribute("aria-expanded"), "true");
+  assert.ok(await dashboardNav.evaluate((element) => element.contains(document.activeElement)));
+  await page.keyboard.press("Escape");
+  await dashboardNav.waitFor({ state: "hidden" });
+  assert.equal(await dashboardMenu.getAttribute("aria-expanded"), "false");
+  assert.ok(await dashboardMenu.evaluate((element) => element === document.activeElement));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await dashboardNav.waitFor();
+  await admin.goto(origin + "/admin/services");
+  await admin.getByRole("link", { name: "New service" }).click();
+  const newService = "CI release verification service";
+  await admin.getByLabel("Service name").fill(newService);
+  await admin.getByLabel("Category").fill("CI category");
+  await admin.getByLabel("Description").fill("Service created during isolated release acceptance.");
+  await admin.getByLabel("Price (USD)").fill("45");
+  await admin.getByLabel("Duration (minutes)").fill("60");
+  await admin.getByLabel("Image URL").fill("https://i.ibb.co/example/salon.png");
+  await admin.getByRole("button", { name: "Save service" }).click();
+  await admin.waitForURL("**/admin/services");
+  await admin.getByPlaceholder("Search services").fill(newService);
+  const newServiceRow = admin.getByRole("row").filter({ hasText: newService });
+  await newServiceRow.getByRole("link", { name: "Edit" }).click();
+  await admin.getByLabel("Price (USD)").fill("35");
+  await admin.getByLabel("Status").selectOption("inactive");
+  await admin.getByRole("button", { name: "Save service" }).click();
+  await admin.waitForURL("**/admin/services");
+  await admin.getByPlaceholder("Search services").fill(newService);
+  await newServiceRow.getByText("Inactive", { exact: true }).waitFor();
+  await newServiceRow.getByText("$35.00", { exact: true }).waitFor();
+  await newServiceRow.getByRole("button", { name: "Delete" }).click();
+  await newServiceRow.getByRole("button", { name: "Confirm", exact: true }).click();
+  await newServiceRow.waitFor({ state: "hidden" });
+
+  await admin.goto(origin + "/admin/users");
+  await admin.getByPlaceholder("Search users").fill(email);
+  const patronRow = admin.getByRole("row").filter({ hasText: email });
+  await patronRow.getByRole("button", { name: "Block", exact: true }).click();
+  await patronRow.getByRole("button", { name: "Confirm", exact: true }).click();
+  await patronRow.getByText("Blocked", { exact: true }).waitFor();
+  await page.goto(origin + "/customer");
+  await page.waitForURL("**/sign-in");
+  await patronRow.getByRole("button", { name: "Unblock", exact: true }).click();
+  await patronRow.getByRole("button", { name: "Confirm", exact: true }).click();
+  await patronRow.getByText("Active", { exact: true }).waitFor();
+
+  await page.goto(origin + "/admin");
+  await page.waitForURL("**/sign-in?reason=admin-required");
+  await page.getByRole("alert").filter({ hasText: "Admin access requires an administrator account." }).waitFor();
+  const forbiddenStats = await page.request.get(origin + "/salon-api/admin/dashboard/stats");
+  assert.equal(forbiddenStats.status(), 403);
+  assert.equal((await forbiddenStats.json()).errors[0].code, "FORBIDDEN");
+
+  await page.goto(origin + "/customer");
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.waitForURL("**/sign-in");
+  await page.goto(origin + "/customer");
+  await page.waitForURL("**/sign-in");
+
+  await page.getByLabel("Patron email address").fill(email);
+  const signInPassword = page.getByLabel("Private security passphrase");
+  await signInPassword.fill("Invalid-" + password);
+  await page.getByRole("button", { name: "Show password" }).click();
+  assert.equal(await signInPassword.getAttribute("type"), "text");
+  await page.getByRole("button", { name: "Hide password" }).click();
+  assert.equal(await signInPassword.getAttribute("type"), "password");
+  await signInPassword.press("Enter");
+  await page.locator(".sanctuary-form [role='alert']").waitFor();
+  await signInPassword.fill(password);
+  await signInPassword.press("Enter");
+  await page.waitForURL("**/customer");
+
+  const duplicateContext = await browser.newContext();
+  const duplicatePage = await pageFor(duplicateContext);
+  await duplicatePage.goto(origin + "/sign-up");
+  await duplicatePage.getByText("Strict security mandate", { exact: true }).waitFor();
+  await duplicatePage.getByLabel("Full name", { exact: true }).fill("Duplicate CI Patron");
+  await duplicatePage.getByLabel("Confidential email address").fill(email);
+  await duplicatePage.getByLabel("Security passphrase", { exact: true }).fill(password);
+  await duplicatePage.locator('input[name="terms"]').check();
+  await duplicatePage.getByRole("button", { name: "Create Patron Account" }).click();
+  await duplicatePage.locator(".sanctuary-form [role='alert']").waitFor();
+  await duplicateContext.close();
+
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto(origin);
+  const menu = page.getByRole("button", { name: "Open menu" });
+  const mobileNav = page.getByRole("navigation", { name: "Mobile navigation" });
+  await mobileNav.waitFor({ state: "hidden" });
+  await menu.focus();
+  await page.keyboard.press("Enter");
+  await mobileNav.waitFor();
+  await page.keyboard.press("Tab");
+  assert.ok(await mobileNav.evaluate((element) => element.contains(document.activeElement)));
+  await page.keyboard.press("Escape");
+  await mobileNav.waitFor({ state: "hidden" });
+  assert.ok(await menu.evaluate((element) => element === document.activeElement));
+
+  for (const width of [390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const route of ["/", "/services", "/sign-in", "/sign-up"]) {
+      await page.goto(origin + route);
+      await page.getByRole("heading", { level: 1 }).first().waitFor();
+      const dimensions = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, viewport: document.documentElement.clientWidth }));
+      assert.ok(dimensions.scroll <= dimensions.viewport + 2, route + " overflows at " + width);
+    }
+  }
+  assert.deepEqual(errors, [], "Unhandled browser errors");
+  console.log("Browser checks passed: six services, catalogue and category recovery, search, registration, booking resume, confirmation, cancellation, payment status retry and history, profile persistence, admin catalogue CRUD, blocking and unblocking, role protection, sign-out, keyboard navigation and dialog behavior, and four responsive widths.");
+} finally {
+  await browser.close();
+}

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
+import { serverApiTarget } from "./src/lib/api-target";
 
-const catalogueApi = (process.env.SALONBOOK_API_URL || process.env.NEXT_PUBLIC_API_URL ||
-  "http://127.0.0.1:5000/api").replace(/\/$/, "");
+const catalogueApi = serverApiTarget();
 
 const nextConfig: NextConfig = {
   async rewrites() {

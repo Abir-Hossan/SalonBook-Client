@@ -1,17 +1,14 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useDeferredValue, useEffect, useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, CalendarDays, CheckCircle2, Clock3, Wallet } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { EmptyState, SectionHeading, StatCard, StatusPill } from "@/components/ui";
 import { ConfirmButton, SearchInput } from "@/components/interactive";
-import { api, json, type Account, type ApiAppointment } from "@/lib/account-api";
+import { api, ApiError, apiPage, json, type Account, type ApiAppointment } from "@/lib/account-api";
 import { dateLabel, money } from "@/lib/utils";
-import type { Service } from "@/types";
-
-type Record = ApiAppointment & { service?: Service };
 type Stats = { totalAppointments: number; pending: number; confirmed: number; cancelled: number };
 
 export function PatronDashboard({ account, mode }: { account: Account; mode: "overview" | "appointments" | "profile" }) {
@@ -21,18 +18,34 @@ export function PatronDashboard({ account, mode }: { account: Account; mode: "ov
 }
 
 function PatronAppointments({ account, overview }: { account: Account; overview: boolean }) {
-  const [rows, setRows] = useState<Record[]>([]);
-  const [canPay, setCanPay] = useState(false);
+  const [rows, setRows] = useState<ApiAppointment[]>([]);
+  const [checkoutAvailability, setCheckoutAvailability] = useState<"loading" | "ready" | "unavailable">("loading");
+  const [checkoutRetry, setCheckoutRetry] = useState(0);
+  const checkoutInProgress = useRef(false);
+  const [checkoutError, setCheckoutError] = useState("");
   const [paying, setPaying] = useState<string>();
   const [stats, setStats] = useState<Stats>();
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
+  const queryText = useDeferredValue(search);
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [selected, setSelected] = useState<Record>();
+  const [selected, setSelected] = useState<ApiAppointment>();
   const [refresh, setRefresh] = useState(0);
+
+  useEffect(() => {
+    if (overview) return;
+    const controller = new AbortController();
+    api<{ stripe: boolean }>("/payments/availability", { signal: controller.signal }).then(({ stripe }) => {
+      if (!controller.signal.aborted) setCheckoutAvailability(stripe ? "ready" : "unavailable");
+    }).catch(() => {
+      if (!controller.signal.aborted) setCheckoutAvailability("unavailable");
+    });
+    return () => controller.abort();
+  }, [overview, checkoutRetry]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -40,20 +53,19 @@ function PatronAppointments({ account, overview }: { account: Account; overview:
       setLoading(true);
       setError("");
       try {
-        const query = new URLSearchParams({ limit: "100" });
+        const query = new URLSearchParams({ limit: overview ? "4" : "10", page: String(page) });
+        if (overview) query.set("upcoming", "true");
+        if (!overview && queryText.trim()) query.set("q", queryText.trim());
         if (status !== "all" && !overview) query.set("status", status);
         const options = { signal: controller.signal };
-        if (!overview) api<{stripe:boolean}>("/payments/availability", options).then((availability) => { if (!controller.signal.aborted) setCanPay(availability.stripe); }).catch(() => {});
         const [appointments, summary] = await Promise.all([
-          api<ApiAppointment[]>("/appointments/my?" + query, options),
+          apiPage<ApiAppointment>("/appointments/my?" + query, options),
           overview ? api<Stats>("/customer/dashboard/stats", options) : Promise.resolve(undefined),
         ]);
-        const services = new Map(await Promise.all([...new Set(appointments.map((row) => row.serviceId))].map(async (id) => {
-          try { return [id, await api<Service>("/services/" + encodeURIComponent(id), options)] as const; }
-          catch { return [id, undefined] as const; }
-        })));
         if (!controller.signal.aborted) {
-          setRows(appointments.map((row) => ({ ...row, service: services.get(row.serviceId) })));
+          setRows(appointments.data);
+          setTotalPages(appointments.totalPages);
+          if (page > appointments.totalPages) setPage(appointments.totalPages);
           setStats(summary);
         }
       } catch (failure) {
@@ -64,7 +76,7 @@ function PatronAppointments({ account, overview }: { account: Account; overview:
     }
     void load();
     return () => controller.abort();
-  }, [overview, refresh, status]);
+  }, [overview, page, queryText, refresh, status]);
 
   async function cancel(id: string) {
     setNotice("");
@@ -78,23 +90,28 @@ function PatronAppointments({ account, overview }: { account: Account; overview:
     }
   }
 
-  async function pay(id: string) {
-    setPaying(id);
-    setError("");
+  async function pay(row: ApiAppointment) {
+    if (checkoutInProgress.current || checkoutAvailability !== "ready" || row.status !== "confirmed" || row.paymentStatus !== "unpaid") return;
+    checkoutInProgress.current = true;
+    setPaying(row.id);
+    setCheckoutError("");
     try {
-      const { url } = await api<{ url: string }>("/payments/checkout", json("POST", { appointmentId: id }));
-      window.location.assign(url);
+      const { url } = await api<{ url: string }>("/payments/checkout", json("POST", { appointmentId: row.id }));
+      let destination: URL | undefined;
+      try { destination = new URL(url); } catch {}
+      if (destination?.origin !== "https://checkout.stripe.com" || destination.username || destination.password) {
+        throw new Error("The checkout link could not be verified.");
+      }
+      window.location.assign(destination.href);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Checkout failed.");
+      setCheckoutError(failure instanceof Error ? failure.message : "Checkout failed.");
+      if (failure instanceof ApiError && [404, 409, 422].includes(failure.status)) setRefresh((value) => value + 1);
+      if (failure instanceof ApiError && failure.status === 503) setCheckoutAvailability("unavailable");
+      checkoutInProgress.current = false;
       setPaying(undefined);
     }
   }
 
-  const filtered = rows.filter((row) => {
-    if (overview) return row.status !== "cancelled";
-    return (row.service?.serviceName ?? row.id).toLowerCase().includes(search.toLowerCase());
-  });
-  const shown = overview ? filtered.slice(0, 4) : filtered.slice((page - 1) * 10, page * 10);
   return <>
     {overview ? <>
       <div className="dashboard-welcome"><div><p className="eyebrow">Patron portal</p><h1>Your Sanctuary Dossier <em>&amp; Upcoming Rituals</em></h1><p>Welcome back, {account.name}.</p></div>
@@ -113,14 +130,23 @@ function PatronAppointments({ account, overview }: { account: Account; overview:
       </div>
     </>}
     {notice && <p role="status">{notice}</p>}
+    {checkoutError && <p role="alert">{checkoutError}</p>}
     {error && <p role="alert">{error} <button className="table-action" onClick={() => setRefresh((value) => value + 1)}>Retry</button></p>}
-    {loading ? <p role="status">Loading appointments…</p> : shown.length ? <div className="appointment-list">{shown.map((row) => <article key={row.id} className="appointment-card">
-      {row.service?.image && <Image src={row.service.image} width={110} height={110} alt=""/>}
-      <div className="appointment-card-main"><span className="eyebrow">{row.id}</span><h3>{row.service?.serviceName ?? "Appointment"}</h3><p>{dateLabel(row.appointmentDate)} · {row.timeSlot}</p><div className="appointment-badges"><StatusPill status={row.status}/><StatusPill status={row.paymentStatus}/></div><button className="table-action" onClick={() => setSelected(row)}>View details</button></div>
-      <div className="appointment-card-end"><b>{money(row.servicePrice)}</b>{!overview && canPay && row.status === "confirmed" && row.paymentStatus === "unpaid" && <button className="button button-dark button-xs" disabled={Boolean(paying)} onClick={() => void pay(row.id)}>{paying === row.id ? "Opening checkout…" : "Pay now"}</button>}{!overview && row.status === "pending" && <ConfirmButton label="Cancel appointment" confirmTitle="Cancel this appointment?" confirmText="It will stay in your history." onConfirm={() => { void cancel(row.id); return false; }}/>}</div>
+    {loading ? <p role="status">Loading appointments…</p> : rows.length ? <div className="appointment-list">{rows.map((row) => <article key={row.id} className="appointment-card">
+      {row.serviceImage && <Image src={row.serviceImage} width={110} height={110} alt=""/>}
+      <div className="appointment-card-main"><span className="eyebrow">{row.id}</span><h3>{row.serviceName ?? "Appointment"}</h3><p>{dateLabel(row.appointmentDate)} · {row.timeSlot}</p><div className="appointment-badges"><StatusPill status={row.status}/><StatusPill status={row.paymentStatus}/></div><button className="table-action" onClick={() => setSelected(row)}>View details</button></div>
+      <div className="appointment-card-end"><b>{money(row.servicePrice)}</b>{row.paymentStatus === "unpaid" && row.status === "pending" && <small>Payment opens after confirmation.</small>}
+        {row.paymentStatus === "unpaid" && row.status === "confirmed" && (overview
+          ? <Link className="table-action" href="/customer/appointments">Go to appointment payment</Link>
+          : checkoutAvailability === "ready"
+            ? <button type="button" className="button button-dark button-xs" disabled={Boolean(paying)} onClick={() => void pay(row)}>{paying === row.id ? "Opening checkout." : "Pay now"}</button>
+            : <small role="status">{checkoutAvailability === "loading" ? "Checking payment availability." : "Online payments are currently unavailable."} {checkoutAvailability === "unavailable" && <button type="button" className="table-action" onClick={() => {
+              setCheckoutAvailability("loading");
+              setCheckoutRetry((value) => value + 1);
+            }}>Check again</button>}</small>)}{!overview && row.status === "pending" && <ConfirmButton label="Cancel appointment" confirmTitle="Cancel this appointment?" confirmText="It will stay in your history." onConfirm={() => { void cancel(row.id); return false; }}/>}</div>
     </article>)}</div> : !error && <EmptyState title="No appointments found" description="Browse services to plan your next visit." action={<Link href="/services">Explore services</Link>}/>}
-    {!overview && filtered.length > 10 && <div className="button-row"><button type="button" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</button><span>Page {page}</span><button type="button" disabled={page * 10 >= filtered.length} onClick={() => setPage(page + 1)}>Next</button></div>}
-    {selected && <div className="confirmation-backdrop"><section className="confirmation-dialog" role="dialog" aria-modal="true" aria-label="Appointment details"><h3>{selected.service?.serviceName ?? "Appointment"}</h3><p>{dateLabel(selected.appointmentDate)} · {selected.timeSlot}</p><p>{money(selected.servicePrice)} · {selected.status} · {selected.paymentStatus}</p><button className="button button-outline" onClick={() => setSelected(undefined)}>Close</button></section></div>}
+    {!overview && totalPages > 1 && <div className="button-row"><button type="button" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</button><span>Page {page} of {totalPages}</span><button type="button" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</button></div>}
+    {selected && <dialog className="confirmation-dialog" aria-label="Appointment details" ref={(dialog) => { if (dialog && !dialog.open) dialog.showModal(); }} onClose={() => setSelected(undefined)}><h3>{selected.serviceName ?? "Appointment"}</h3><p>{dateLabel(selected.appointmentDate)} · {selected.timeSlot}</p><p>{money(selected.servicePrice)} · {selected.status} · {selected.paymentStatus}</p>{selected.serviceDuration && <p>{selected.serviceDuration} minutes</p>}{selected.message && <p>{selected.message}</p>}<form method="dialog"><button className="button button-outline">Close</button></form></dialog>}
     {overview && <section className="dashboard-promo"><div><p className="eyebrow">A note from the atelier</p><h3>Make a little room for something lovely.</h3><Link className="text-link" href="/services">Discover the collection <ArrowUpRight size={14}/></Link></div></section>}
   </>;
 }

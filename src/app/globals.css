@@ -23,7 +23,7 @@
 
 .table-action{border:0;background:transparent;color:#8d704e;font-size:9px;font-weight:700;padding:5px}.table-action.danger{color:#a45f55}.password-toggle{border:0;background:transparent;color:#9a8f81;padding:4px;display:grid;place-items:center}.password-toggle:hover{color:var(--gold)}.confirm-inline .button-danger{white-space:nowrap}
 
-.confirmation-backdrop{position:fixed;inset:0;background:#211e19a8;z-index:80;display:grid;place-items:center;padding:20px}.confirmation-dialog{width:min(100%,460px);background:var(--paper);padding:30px;box-shadow:0 24px 70px #0003}.confirmation-dialog h3{font-family:var(--serif);font-size:27px;font-weight:400;margin:0 0 10px}.confirmation-dialog>p:not(.eyebrow){font-size:11px;color:var(--muted);line-height:1.8}.dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}
+.confirmation-backdrop{position:fixed;inset:0;background:#211e19a8;z-index:80;display:grid;place-items:center;padding:20px}.confirmation-dialog{width:min(100%,460px);background:var(--paper);padding:30px;box-shadow:0 24px 70px #0003}dialog.confirmation-dialog{margin:auto;border:0;max-width:calc(100% - 40px);max-height:calc(100% - 40px);color:inherit}dialog.confirmation-dialog::backdrop{background:#211e19a8}.confirmation-dialog h3{font-family:var(--serif);font-size:27px;font-weight:400;margin:0 0 10px}.confirmation-dialog>p:not(.eyebrow){font-size:11px;color:var(--muted);line-height:1.8}.dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}
 
 
 /* Figma-aligned SalonBook design system and Browse Atelier Services page */
@@ -40,6 +40,9 @@ html,body{background:#fff8f5;font-family:var(--sans)}
 .header-account{width:34px;height:34px;border-radius:50%;background:#211a14;color:#fff8f5;display:grid;place-items:center}
 .public-header .button{border-radius:3px;min-height:38px;padding:10px 16px;font-size:9px;letter-spacing:.08em}
 .mobile-nav{top:80px;z-index:51}
+.mobile-nav[hidden]{display:none}
+@media(min-width:801px){.mobile-nav{display:none}}
+@media(max-width:800px){.dashboard-sidebar:not(.sidebar-open){visibility:hidden}}
 .site-footer{background:#fff1e8;color:#211a14;padding:58px max(28px,calc((100vw - 1320px)/2)) 18px;border-top:1px solid #eee0d6}
 .footer-main{max-width:1320px;margin:0 auto;grid-template-columns:1.35fr 1fr 1.3fr 1.15fr;gap:48px;padding-bottom:48px}
 .footer-main>div{display:flex;flex-direction:column;align-items:flex-start;gap:9px}

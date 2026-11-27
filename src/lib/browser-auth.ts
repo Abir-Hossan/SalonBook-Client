@@ -1,12 +1,12 @@
 import { api, type Account } from "./account-api";
+import { apiFetch } from "./api-fetch";
 
 const authPath = "/api/better-auth";
 
 export async function authRequest<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(authPath + path, {
+  const response = await apiFetch(authPath + path, {
     method: "POST",
     credentials: "same-origin",
-    cache: "no-store",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });

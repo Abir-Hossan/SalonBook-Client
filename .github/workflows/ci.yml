@@ -1,0 +1,79 @@
+name: Client checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      SALONBOOK_API_URL: https://salonbook-api.invalid/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/api-target.test.mjs
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CLIENT_URL: http://127.0.0.1:3000
+      ALLOWED_ORIGINS: http://127.0.0.1:3000
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+      SALONBOOK_API_URL: http://127.0.0.1:5000/api
+      MONGODB_URI: mongodb://127.0.0.1:27017/?replicaSet=salonbook-ci
+      MONGODB_DB_NAME: salonbook_ci_browser
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: Abir-Hossan/SalonBook-Server
+          ref: completion/assignment-readiness
+          path: server-ci
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - run: npm ci && npm run build
+        working-directory: server-ci
+      - name: Install browser
+        run: |
+          npm install --prefix "$RUNNER_TEMP/salonbook-e2e" playwright@1.56.1
+          "$RUNNER_TEMP/salonbook-e2e/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Start disposable MongoDB and application
+        run: |
+          docker run --detach --name salonbook-mongo -p 127.0.0.1:27017:27017 mongo:8.0 --replSet salonbook-ci --bind_ip_all
+          for attempt in $(seq 1 30); do
+            if docker exec salonbook-mongo mongosh --quiet --eval 'rs.initiate({_id: "salonbook-ci", members: [{_id: 0, host: "127.0.0.1:27017"}]})'; then break; fi
+            sleep 2
+          done
+          for attempt in $(seq 1 30); do
+            if docker exec salonbook-mongo mongosh --quiet --eval 'quit(db.hello().isWritablePrimary ? 0 : 1)'; then break; fi
+            sleep 2
+          done
+          export BETTER_AUTH_SECRET="$(openssl rand -hex 32)"
+          export SALONBOOK_CI_ADMIN_PASSWORD="Ci-Admin-1$(openssl rand -hex 16)"
+          echo "::add-mask::$SALONBOOK_CI_ADMIN_PASSWORD"
+          echo "SALONBOOK_CI_ADMIN_PASSWORD=$SALONBOOK_CI_ADMIN_PASSWORD" >> "$GITHUB_ENV"
+          (cd server-ci && npm run seed:catalog)
+          (cd server-ci && npm start) > "$RUNNER_TEMP/salonbook-server.log" 2>&1 &
+          curl --retry 60 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:5000/api/ready
+          node --input-type=module <<'NODE'
+          const response = await fetch("http://127.0.0.1:5000/api/auth/register", {
+            method: "POST", headers: { Origin: "http://127.0.0.1:3000", "Content-Type": "application/json" },
+            body: JSON.stringify({ email: "admin@example.test", name: "CI Administrator", acceptedTerms: true, password: process.env.SALONBOOK_CI_ADMIN_PASSWORD }),
+          });
+          if (response.status !== 201) throw new Error("CI administrator fixture registration failed: " + response.status);
+          NODE
+          (cd server-ci && SALONBOOK_BOOTSTRAP_ADMIN_EMAIL=admin@example.test npm run bootstrap:admin)
+          npm run dev -- --hostname 127.0.0.1 > "$RUNNER_TEMP/salonbook-client.log" 2>&1 &
+          curl --retry 60 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:3000/ > /dev/null
+      - run: node tests/booking-smoke.mjs

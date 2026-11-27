@@ -1,63 +1,42 @@
 # SalonBook Client
 
-Luxury salon appointment-booking frontend built with Next.js App Router, React, TypeScript, and Tailwind CSS.
+SalonBook is a salon appointment booking application. This repository contains the Next.js frontend for the public catalogue, customer portal, and administration dashboard. The companion [SalonBook Server](https://github.com/Abir-Hossan/SalonBook-Server) provides the API and stores application data.
 
-## Phase 01 scope
+## What the app does
 
-- Public home, service catalogue, service details, sign-in/sign-up, payment result and error pages
-- Customer overview, appointments, and profile
-- Admin overview, service management, appointment management, customer management, transactions, and profile
-- Responsive layouts and temporary local mock data
-- Loading, empty, error, success, and confirmation UI states
+| Area | Features |
+| --- | --- |
+| Public catalogue | Browse, search, filter, and sort services. View service details and available times. |
+| Customer portal | Create an account, request an appointment, manage upcoming bookings, and view payment history. |
+| Admin dashboard | Manage services and customers, confirm appointments, and review transactions. |
 
-Home, service browsing, and service details read from the Express API at `SALONBOOK_API_URL`. The booking, auth, and dashboard screens still contain preview flows.
+A customer submits a booking request, an administrator confirms it, and the customer can then pay for the confirmed appointment using Stripe Checkout in test mode. A draft can be resumed in the originating browser tab after sign-in. The `/demo` pages use local sample data.
 
-The sign-in screen uses a client component for interactive controls so the route can be prerendered. Authentication and password recovery still require the server integration.
+## Local setup
 
-## Requirements
-
-- Node.js 20.9+ (Node 22 LTS recommended)
-- npm 10+
-
-## Setup
+Use Node.js 24 and npm 10 or newer. Start the [companion API](https://github.com/Abir-Hossan/SalonBook-Server#local-setup) with a local MongoDB replica set.
 
 ```bash
-npm install
+npm ci
 cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000. Run the server concurrently. To preview a populated catalogue before MongoDB is connected, set `SEED_DEMO_CATALOG=true` on the development server.
+Open [http://localhost:3000](http://localhost:3000). The example environment points `SALONBOOK_API_URL` to `http://127.0.0.1:5000/api`. Keep the frontend origin consistent with the Server's authentication and CORS settings. If the catalogue is empty, seed the local database from the Server repository.
 
-## Quality checks
+## Verification
 
 ```bash
+node --test tests/api-target.test.mjs
 npm run typecheck
 npm run lint
 npm run build
 ```
 
-## Routes
+The GitHub Actions browser job runs the booking smoke test in Chromium against the companion API and a disposable MongoDB replica set.
 
-- `/`
-- `/services`
-- `/services/[id]`
-- `/sign-in`
-- `/sign-up`
-- `/payment/success`
-- `/payment/cancel`
-- `/customer`
-- `/customer/appointments`
-- `/customer/profile`
-- `/admin`
-- `/admin/services`
-- `/admin/services/new`
-- `/admin/services/[id]/edit`
-- `/admin/appointments`
-- `/admin/users`
-- `/admin/transactions`
-- `/admin/profile`
+## Deployment
 
-## Temporary mock behavior
+Set `SALONBOOK_API_URL` in the Vercel environment to the corresponding HTTPS API URL ending in `/api`. Use independent Preview and Production values. The Server must trust the exact browser origin used for authentication. For a protected Preview, sign in to Vercel in the same browser used to test provider redirects.
 
-Forms and dashboard actions demonstrate frontend states only. Data is not persisted and no real authentication or payment is performed. These flows will be replaced by backend integration in the corresponding approved phases.
+Verify a deployment with the frontend's `/salon-api/health` route and the API's `/api/ready` route. For screen references and asset provenance, see the [design mapping](FIGMA_SCREEN_MAPPING.md).
